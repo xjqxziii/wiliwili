@@ -10,7 +10,7 @@
 */
 
 // Uncomment this to disable google analytics
-//#define NO_GA
+#define NO_GA
 
 #include <borealis.hpp>
 
@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
     GA("open_app", {{"version", APPVersion::instance().getVersionStr()},
                     {"language", brls::Application::getLocale()},
                     {"window", fmt::format("{}x{}", brls::Application::windowWidth, brls::Application::windowHeight)}})
-    APPVersion::instance().checkUpdate();
+//    APPVersion::instance().checkUpdate();
 
     // Run the app
     // brls::Application::setLimitedFPS(60);
