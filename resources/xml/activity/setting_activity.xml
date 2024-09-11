@@ -150,6 +150,9 @@
                             <brls:BooleanCell
                                     id="cell/fullscreen"/>
 
+                            <SelectorCell
+                                    id="cell/onTopMode"/>
+
                             <brls:BooleanCell
                                     id="cell/gamepadVibration"/>
 

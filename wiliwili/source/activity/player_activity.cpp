@@ -98,7 +98,7 @@ public:
 
 /// PlayerActivity
 
-PlayerActivity::PlayerActivity(const std::string& bvid, unsigned int cid, int progress) {
+PlayerActivity::PlayerActivity(const std::string& bvid, uint64_t cid, int progress) {
     videoDetailResult.bvid = bvid;
     videoDetailPage.cid    = cid;
     this->setProgress(progress);
@@ -158,7 +158,7 @@ void PlayerActivity::onContentAvailable() {
     this->videoTitleBox->addGestureRecognizer(new brls::TapGestureRecognizer(this->videoTitleBox));
 
     // 自动加载下一页评论
-    this->recyclingGrid->onNextPage([this]() { this->requestVideoComment(this->videoDetailResult.aid); });
+    this->recyclingGrid->onNextPage([this]() { this->requestVideoComment(std::to_string(this->videoDetailResult.aid)); });
 
     this->requestData(this->videoDetailResult);
 

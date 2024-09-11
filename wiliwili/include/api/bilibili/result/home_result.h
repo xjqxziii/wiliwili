@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "nlohmann/json.hpp"
+#include "bilibili/util/json.hpp"
 #include "user_result.h"
 
 namespace bilibili {
@@ -25,6 +25,15 @@ inline void from_json(const nlohmann::json& nlohmann_json_j, VideoSimpleStateRes
 inline void to_json(nlohmann::json& nlohmann_json_j, const VideoSimpleStateResult& nlohmann_json_t) {
     NLOHMANN_JSON_EXPAND(NLOHMANN_JSON_PASTE(NLOHMANN_JSON_TO, view, danmaku));
 }
+
+// 动态视频状态
+class VideoSimpleStateResultV2 {
+public:
+    std::string play{};
+    std::string like{};
+    std::string danmaku{};
+};
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(VideoSimpleStateResultV2, play, like, danmaku);
 
 class RecommendReasonResult {
 public:
@@ -47,9 +56,9 @@ inline void from_json(const nlohmann::json& nlohmann_json_j, RecommendReasonResu
 
 class RecommendVideoResult {
 public:
-    int id;
+    uint64_t id;
     std::string bvid;
-    int cid;
+    uint64_t cid;
     std::string pic   = "";
     std::string title = "";
     int duration;

@@ -36,6 +36,12 @@ enum class OSDState {
     ALWAYS_ON = 2,
 };
 
+class VideoHighlightData {
+public:
+    int sec = 0;
+    std::vector<float> data;
+};
+
 #define VIDEO_CANCEL_SEEKING 0
 #define VIDEO_SEEK_IMMEDIATELY 0
 
@@ -161,7 +167,7 @@ public:
     void setCustomToggleAction(std::function<void()> action);
 
     /// 番剧自定义菜单信息
-    void setBangumiCustomSetting(const std::string& title, unsigned int seasonId);
+    void setBangumiCustomSetting(const std::string& title, uint64_t seasonId);
 
     void setTitle(const std::string& title);
 
@@ -195,7 +201,7 @@ public:
     float getProgress();
 
     // 设置高能进度条
-    void setHighlightProgress(int sec, const std::vector<float>& data);
+    void setHighlightProgress(const VideoHighlightData& data);
 
     // 进度条上方显示提示文字
     void showHint(const std::string& value);
@@ -212,6 +218,9 @@ public:
     bool isFullscreen();
 
     void setFullScreen(bool fs);
+
+    /// 分集点击事件
+    void setSeasonAction(brls::ActionListener action);
 
     void draw(NVGcontext* vg, float x, float y, float width, float height, brls::Style style,
               brls::FrameContext* ctx) override;
@@ -237,6 +246,7 @@ public:
     inline static const std::string LAST_TIME      = "LAST_TIME";
     inline static const std::string REPLAY         = "REPLAY";
     inline static const std::string CLIP_INFO      = "CLIP_INFO";
+    inline static const std::string HIGHLIGHT_INFO = "HIGHLIGHT_INFO";
     inline static const std::string REAL_DURATION  = "REAL_DURATION";
 
     // 用于指定 lastPlayedPosition 的值
@@ -283,6 +293,7 @@ private:
     MPVEvent::Subscription eventSubscribeID;
     CustomEvent::Subscription customEventSubscribeID;
     std::function<void()> customToggleAction = nullptr;
+    brls::ActionListener seasonAction = nullptr;
     brls::InputManager* input;
     NVGcolor bottomBarColor = brls::Application::getTheme().getColor("color/bilibili");
 
@@ -306,6 +317,7 @@ private:
     BRLS_BIND(brls::Label, rightStatusLabel, "video/right/status");
     BRLS_BIND(brls::Label, videoQuality, "video/quality");
     BRLS_BIND(brls::Label, videoSpeed, "video/speed");
+    BRLS_BIND(brls::Label, showEpisode, "show/episode");
     BRLS_BIND(brls::Label, speedHintLabel, "video/speed/hint/label");
     BRLS_BIND(brls::Box, speedHintBox, "video/speed/hint/box");
     BRLS_BIND(brls::Box, btnToggle, "video/osd/toggle");
@@ -336,8 +348,7 @@ private:
     int real_duration          = 0;
     time_t hintLastShowTime    = 0;
     int64_t lastPlayedPosition = POSITION_UNDEFINED;
-    int highlight_step_sec     = 0;
-    std::vector<float> highlight_data;  // 在播放器进度条上显示的标记点（用来展示片头片尾标记）
+    VideoHighlightData highlightData;  // 在播放器进度条上显示的标记点（用来展示片头片尾标记）
 
     MPVCore* mpvCore;
     brls::Rect oldRect = brls::Rect(-1, -1, -1, -1);

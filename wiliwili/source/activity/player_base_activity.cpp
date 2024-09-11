@@ -22,9 +22,9 @@
 #include "view/subtitle_core.hpp"
 #include "view/mpv_core.hpp"
 
-class DataSourceCommentList : public RecyclingGridDataSource, public CommentRequest {
+class DataSourceCommentList : public RecyclingGridDataSource, public CommentAction {
 public:
-    DataSourceCommentList(bilibili::VideoCommentListResult result, size_t aid, int mode, std::function<void(void)> cb)
+    DataSourceCommentList(bilibili::VideoCommentListResult result, uint64_t aid, int mode, std::function<void(void)> cb)
         : dataList(std::move(result)), aid(aid), commentMode(mode), switchModeCallback(cb) {}
     RecyclingGridItem* cellForRow(RecyclingGrid* recycler, size_t index) override {
         if (index == 0) {
@@ -66,13 +66,13 @@ public:
             brls::Application::getImeManager()->openForText(
                 [this, recycler](const std::string& text) {
                     if (text.empty()) return;
-                    this->commentReply(text, aid, 0, 0,
+                    this->commentReply(text, std::to_string(aid), 0, 0, 1,
                                        [this, recycler](const bilibili::VideoCommentAddResult& result) {
                                            this->dataList.insert(dataList.begin(), result.reply);
                                            recycler->reloadData();
                                        });
                 },
-                "", "", 500, "", 0);
+                "wiliwili/player/single_comment/hint"_i18n, "", 500, "", 0);
             return;
         }
 
@@ -80,7 +80,7 @@ public:
         if (!item) return;
 
         auto* view = new PlayerSingleComment();
-        view->setCommentData(dataList[index - 2], item->getY());
+        view->setCommentData(dataList[index - 2], item->getY(), 1);
         auto container = new brls::AppletFrame(view);
         container->setHeaderVisibility(brls::Visibility::GONE);
         container->setFooterVisibility(brls::Visibility::GONE);
@@ -128,7 +128,7 @@ public:
 
 private:
     bilibili::VideoCommentListResult dataList;
-    size_t aid;
+    uint64_t aid;
     int commentMode                              = 3;  // 2: 按时间；3: 按热度
     std::function<void(void)> switchModeCallback = nullptr;
 };
@@ -363,7 +363,7 @@ void BasePlayerActivity::setCommonData() {
     video->hideOSDLockButton();
 }
 
-void BasePlayerActivity::showCollectionDialog(int64_t id, int videoType) {
+void BasePlayerActivity::showCollectionDialog(uint64_t id, int videoType) {
     if (!DialogHelper::checkLogin()) return;
     auto playerCollection = new PlayerCollection(id, videoType);
     auto dialog           = new brls::Dialog(playerCollection);
@@ -383,7 +383,7 @@ void BasePlayerActivity::showCollectionDialog(int64_t id, int videoType) {
     dialog->open();
 }
 
-void BasePlayerActivity::showCoinDialog(size_t aid) {
+void BasePlayerActivity::showCoinDialog(uint64_t aid) {
     if (!DialogHelper::checkLogin()) return;
 
     if (std::to_string(videoDetailResult.owner.mid) == ProgramConfig::instance().getUserID()) {
@@ -465,7 +465,7 @@ void BasePlayerActivity::setCommentMode() {
     this->recyclingGrid->estimatedRowHeight = 100;
     this->recyclingGrid->showSkeleton();
     tabFrame->focusTab(0);
-    requestVideoComment(this->getAid(), 0, getVideoCommentMode() == 3 ? 2 : 3);
+    requestVideoComment(std::to_string(this->getAid()), 0, getVideoCommentMode() == 3 ? 2 : 3);
 }
 
 void BasePlayerActivity::onVideoPlayUrl(const bilibili::VideoUrlResult& result) {
@@ -668,7 +668,8 @@ void BasePlayerActivity::onVideoRelationInfo(const bilibili::VideoRelation& resu
 
 void BasePlayerActivity::onHighlightProgress(const bilibili::VideoHighlightProgress& result) {
     brls::Logger::debug("highlight: {}/{}", result.step_sec, result.data.size());
-    this->video->setHighlightProgress(result.step_sec, result.data);
+    VideoHighlightData data{result.step_sec, result.data};
+    APP_E->fire(VideoView::HIGHLIGHT_INFO, (void*)&data);
 }
 
 void BasePlayerActivity::setRelationButton(bool liked, bool coin, bool favorite) {

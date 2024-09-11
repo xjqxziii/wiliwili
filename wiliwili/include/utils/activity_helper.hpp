@@ -9,9 +9,9 @@
 class Intent {
 public:
     // 开启各类视频
-    static void openBV(const std::string& bvid, int cid = 0, int progress = -1);
-    static void openSeasonBySeasonId(int seasonId, int progress = -1);
-    static void openSeasonByEpId(int epId, int progress = -1);
+    static void openBV(const std::string& bvid, uint64_t cid = 0, int progress = -1);
+    static void openSeasonBySeasonId(uint64_t seasonId, int progress = -1);
+    static void openSeasonByEpId(uint64_t epId, int progress = -1);
     static void openLive(int id, const std::string& name = "", const std::string& views = "");
     static void openLocal(const cpr::fs::path &path);
 
@@ -30,6 +30,9 @@ public:
     // 开启应用设置
     static void openSetting();
 
+    // 开启消息盒子
+    static void openInbox();
+
     // switch 应用开启教程
     static void openHint();
 
@@ -41,6 +44,9 @@ public:
 
     // 开启 DLNA
     static void openDLNA();
+
+    // 开启动态
+    static void openActivity(const std::string& id);
 
     static void _registerFullscreen(brls::Activity* activity);
 };

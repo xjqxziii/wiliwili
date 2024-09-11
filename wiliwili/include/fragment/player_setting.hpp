@@ -55,7 +55,7 @@ public:
 
     void hideSkipOpeningCreditsSetting();
 
-    void setBangumiCustomSetting(const std::string& title, unsigned int seasonId);
+    void setBangumiCustomSetting(const std::string& title, uint64_t seasonId);
 
 private:
     BRLS_BIND(ButtonClose, closebtn, "button/close");
@@ -73,6 +73,7 @@ private:
 
     // common setting
     BRLS_BIND(brls::BooleanCell, btnFullscreen, "setting/fullscreen");
+    BRLS_BIND(BiliSelectorCell, btnOnTopMode, "setting/onTopMode");
     BRLS_BIND(brls::BooleanCell, btnProgress, "setting/video/progress");
     BRLS_BIND(brls::BooleanCell, btnHistory, "setting/history/log");
     BRLS_BIND(brls::DetailCell, btnPlayStrategy, "setting/play/strategy");
@@ -103,7 +104,7 @@ private:
     BRLS_BIND(brls::Header, trackAudioHeader, "setting/track/audio/header");
     BRLS_BIND(brls::Box, trackAudioBox, "setting/track/audio/box");
 
-    unsigned int seasonId{};
+    uint64_t seasonId{};
 
     // 更新倒计时
     void updateCountdown(size_t now);

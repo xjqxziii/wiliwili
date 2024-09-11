@@ -353,8 +353,37 @@ void SettingActivity::onContentAvailable() {
                              // 设置当前状态
                              brls::Application::getPlatform()->getVideoContext()->fullScreen(value);
                          });
+
+    auto setOnTopCell = [this](bool enabled){
+        if (enabled) {
+            cellOnTopMode->setDetailTextColor(brls::Application::getTheme()["brls/list/listItem_value_color"]);
+        } else {
+            cellOnTopMode->setDetailTextColor(brls::Application::getTheme()["brls/text_disabled"]);
+        }
+    };
+    setOnTopCell(conf.getIntOptionIndex(SettingItem::ON_TOP_MODE) != 0);
+    int onTopModeIndex = conf.getIntOption(SettingItem::ON_TOP_MODE);
+    cellOnTopMode->setText("wiliwili/setting/app/others/always_on_top"_i18n);
+    std::vector<std::string> onTopOptionList = {"hints/off"_i18n, "hints/on"_i18n,
+                                                "wiliwili/player/setting/aspect/auto"_i18n};
+    cellOnTopMode->setDetailText(onTopOptionList[onTopModeIndex]);
+    cellOnTopMode->registerClickAction([this, onTopOptionList, setOnTopCell](brls::View* view) {
+        BaseDropdown::text(
+            "wiliwili/setting/app/others/always_on_top"_i18n, onTopOptionList,
+            [this, onTopOptionList, setOnTopCell](int data) {
+                cellOnTopMode->setDetailText(onTopOptionList[data]);
+                ProgramConfig::instance().setSettingItem(SettingItem::ON_TOP_MODE, data);
+                ProgramConfig::instance().checkOnTop();
+                setOnTopCell(data != 0);
+            },
+            ProgramConfig::instance().getIntOption(SettingItem::ON_TOP_MODE),
+            "wiliwili/setting/app/others/always_on_top_hint"_i18n);
+        return true;
+    });
+
 #else
     cellFullscreen->setVisibility(brls::Visibility::GONE);
+    cellOnTopMode->setVisibility(brls::Visibility::GONE);
 #endif
 
     /// App theme
@@ -550,7 +579,7 @@ void SettingActivity::onContentAvailable() {
 
     selectorInmemory->init("wiliwili/setting/app/playback/in_memory_cache"_i18n,
 #ifdef __PSV__
-                           {"0MB (" + "hints/off"_i18n + ")", "5MB", "10MB"},
+                           {"0MB (" + "hints/off"_i18n + ")", "1MB", "5MB", "10MB"},
 #else
         {"0MB (" + "hints/off"_i18n + ")", "10MB", "20MB", "50MB", "100MB"},
 #endif
@@ -594,7 +623,7 @@ void SettingActivity::onContentAvailable() {
             ProgramConfig::instance().setSettingItem(SettingItem::HTTP_PROXY, httpProxy);
             ProgramConfig::instance().setProxy(httpProxy);
         },
-        "http://127.0.0.1:7890", "wiliwili/setting/app/network/proxy_hint"_i18n);
+        "http://127.0.0.1:7890", "wiliwili/setting/app/network/proxy_hint"_i18n, 64);
 
 /// Hardware decode
 #ifdef PS4

@@ -36,6 +36,10 @@
         "proxy": "프록시",
         "proxy_hint": "예: http://127.0.0.1:7890"
       },
+      "ui": {
+        "header": "사용자 인터페이스",
+        "tv_osd": "TV 스타일 OSD 제어"
+      },
       "others": {
         "header": "기타",
         "vibration": "게임패드 진동",
@@ -44,6 +48,7 @@
         "limited_fps": "최대 프레임 제한",
         "limited_fps_vsync": "수직 동기화",
         "fullscreen": "전체화면",
+        "always_on_top": "항상 상단",
         "tv_search": "TV 스타일 검색 페이지",
         "clear_history": "검색 기록 지우기",
         "clear_season": "반구미 커스텀 설정 지우기",
@@ -205,6 +210,11 @@
       "tab": "영화"
     }
   },
+  "dynamic": {
+    "detail": "활성 세부정보",
+    "video": "비디오",
+    "article": "활성"
+  },
   "search": {
     "tv": {
       "hint": "키워드 및 해당 이니셜 지원",
@@ -216,6 +226,13 @@
       "history_clear": "모두 지움",
       "history_delete": "삭제",
       "suggest": "제안"
+    },
+    "order": {
+      "all": "모두",
+      "click": "클릭",
+      "pubdate": "출시날짜",
+      "dm": "탄막",
+      "stow": "즐겨찾기"
     },
     "tab": "검색",
     "t0": "이력",
@@ -276,6 +293,7 @@
     "recommend": "추천",
     "uploaded": "기타",
     "qr": "QR 코드를 스캔하여 시청/공유",
+    "clipboard": "클립보드에 복사됨",
     "comment": "덧글",
     "current": " 사람들이 보고 있습니다",
     "share": "공유",
@@ -343,6 +361,8 @@
       },
       "aspect": {
         "header": "비디오 화면비",
+        "crop": "자르기",
+        "stretch": "늘이기",
         "auto": "자동"
       },
       "shader": {

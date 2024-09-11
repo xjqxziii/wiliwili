@@ -19,7 +19,7 @@
 void VideoDetail::requestData(const bilibili::VideoDetailResult& video) { this->requestVideoInfo(video.bvid); }
 
 /// 请求番剧数据
-void VideoDetail::requestData(size_t id, PGC_ID_TYPE type) {
+void VideoDetail::requestData(uint64_t id, PGC_ID_TYPE type) {
     if (type == PGC_ID_TYPE::SEASON_ID)
         this->requestSeasonInfo(id, 0);
     else if (type == PGC_ID_TYPE::EP_ID)
@@ -27,7 +27,7 @@ void VideoDetail::requestData(size_t id, PGC_ID_TYPE type) {
 }
 
 /// 获取番剧信息
-void VideoDetail::requestSeasonInfo(size_t seasonID, size_t epID) {
+void VideoDetail::requestSeasonInfo(uint64_t seasonID, uint64_t epID) {
     // 重置MPV
     MPVCore::instance().reset();
 
@@ -89,7 +89,7 @@ void VideoDetail::requestSeasonInfo(size_t seasonID, size_t epID) {
 
                 for (size_t i = 0; i < episodeList.size(); i++) episodeList[i].index = i;
 
-                size_t ep_id = epID;
+                uint64_t ep_id = epID;
                 if (ep_id == 0) {
                     ep_id                  = result.user_status.last_ep_id;
                     episodeResult.progress = result.user_status.last_time;
@@ -134,7 +134,7 @@ void VideoDetail::requestSeasonInfo(size_t seasonID, size_t epID) {
         });
 }
 
-void VideoDetail::requestSeasonRecommend(size_t seasonID) {
+void VideoDetail::requestSeasonRecommend(uint64_t seasonID) {
     ASYNC_RETAIN
     BILI::get_season_recommend(
         seasonID,
@@ -150,7 +150,7 @@ void VideoDetail::requestSeasonRecommend(size_t seasonID) {
         });
 }
 
-void VideoDetail::requestSeasonStatue(size_t seasonID) {
+void VideoDetail::requestSeasonStatue(uint64_t seasonID) {
     ASYNC_RETAIN
     BILI::get_season_status(
         seasonID,
@@ -238,7 +238,7 @@ void VideoDetail::requestVideoInfo(const std::string& bvid) {
                 if (!videoDetailResult.ugc_season.sections.empty()) this->onUGCSeasonInfo(videoDetailResult.ugc_season);
 
                 // 请求视频评论
-                this->requestVideoComment(this->videoDetailResult.aid, 0, 3);
+                this->requestVideoComment(std::to_string(this->videoDetailResult.aid), 0, 3);
 
                 // 请求用户投稿列表
                 this->requestUploadedVideos(videoDetailResult.owner.mid, 1);
@@ -261,7 +261,7 @@ void VideoDetail::requestVideoInfo(const std::string& bvid) {
 }
 
 /// 获取视频地址
-void VideoDetail::requestVideoUrl(std::string bvid, int cid, bool requestHistoryInfo) {
+void VideoDetail::requestVideoUrl(const std::string& bvid, uint64_t cid, bool requestHistoryInfo) {
     // 重置MPV
     MPVCore::instance().reset();
     ASYNC_RETAIN
@@ -295,7 +295,7 @@ void VideoDetail::requestVideoUrl(std::string bvid, int cid, bool requestHistory
 }
 
 /// 获取番剧地址
-void VideoDetail::requestSeasonVideoUrl(const std::string& bvid, int cid, bool requestHistoryInfo) {
+void VideoDetail::requestSeasonVideoUrl(const std::string& bvid, uint64_t cid, bool requestHistoryInfo) {
     // 重置MPV
     MPVCore::instance().reset();
 
@@ -330,7 +330,7 @@ void VideoDetail::requestSeasonVideoUrl(const std::string& bvid, int cid, bool r
 }
 
 /// 获取投屏地址
-void VideoDetail::requestCastVideoUrl(int oid, int cid, int type) {
+void VideoDetail::requestCastVideoUrl(uint64_t oid, uint64_t cid, int type) {
     ASYNC_RETAIN
     brls::Logger::debug("请求投屏视频播放地址: {}/{}", oid, cid);
     BILI::get_video_url_cast(
@@ -381,52 +381,13 @@ void VideoDetail::changeEpisode(const bilibili::SeasonEpisodeResult& i) {
 
     this->onSeasonEpisodeInfo(i);
     this->requestSeasonVideoUrl(i.bvid, i.cid);
-    this->requestVideoComment(i.aid, 0, 3);
+    this->requestVideoComment(std::to_string(i.aid), 0, 3);
     this->requestVideoRelationInfo(i.id);
     GA("season_video", {{"bvid", i.bvid}})
 }
 
-/// 获取视频评论
-void VideoDetail::requestVideoComment(int aid, int next, int mode) {
-    if (mode != -1) {
-        this->setVideoCommentMode(mode);
-    }
-    if (next >= 0) {
-        this->commentRequestIndex = next;
-    }
-    brls::Logger::debug("请求视频评论: {} 页号 {}", aid, commentRequestIndex);
-    ASYNC_RETAIN
-    BILI::get_comment(
-        aid, commentRequestIndex, getVideoCommentMode(),
-        [ASYNC_TOKEN, aid](const bilibili::VideoCommentResultWrapper& result) {
-            brls::sync([ASYNC_TOKEN, aid, result]() {
-                ASYNC_RELEASE
-                if (this->commentRequestIndex != (int)result.requestIndex) {
-                    brls::Logger::error("request comment {}/{} got: {}", aid, commentRequestIndex, result.requestIndex);
-                    return;
-                }
-                if (!result.cursor.is_end) {
-                    this->commentRequestIndex = result.cursor.next;
-                }
-                bilibili::VideoCommentResultWrapper res = result;
-                std::string& video_uploader             = userDetailResult.card.mid;
-                for (auto& i : res.top_replies) i.member.is_uploader = i.member.mid == video_uploader;
-                for (auto& i : res.replies) i.member.is_uploader = i.member.mid == video_uploader;
-                this->onCommentInfo(res);
-            });
-        },
-        [ASYNC_TOKEN](BILI_ERR) {
-            ASYNC_RELEASE
-            this->onRequestCommentError(error);
-        });
-}
-
-int VideoDetail::getVideoCommentMode() { return commentMode; }
-
-void VideoDetail::setVideoCommentMode(int mode) { this->commentMode = mode; }
-
 /// 获取Up主的其他视频
-void VideoDetail::requestUploadedVideos(int64_t mid, int pn, int ps) {
+void VideoDetail::requestUploadedVideos(uint64_t mid, int pn, int ps) {
     if (pn != 0) {
         this->userUploadedVideoRequestIndex = pn;
     }
@@ -451,7 +412,7 @@ void VideoDetail::requestUploadedVideos(int64_t mid, int pn, int ps) {
 }
 
 /// 获取单个视频播放人数
-void VideoDetail::requestVideoOnline(const std::string& bvid, int cid) {
+void VideoDetail::requestVideoOnline(const std::string& bvid, uint64_t cid) {
     brls::Logger::debug("请求当前视频在线人数: bvid: {} cid: {}", bvid, cid);
     ASYNC_RETAIN
     BILI::get_video_online(
@@ -487,7 +448,7 @@ void VideoDetail::requestVideoRelationInfo(const std::string& bvid) {
 }
 
 /// 获取番剧分集的 点赞、投币、收藏情况
-void VideoDetail::requestVideoRelationInfo(size_t epid) {
+void VideoDetail::requestVideoRelationInfo(uint64_t epid) {
     ASYNC_RETAIN
     BILI::get_video_relation(
         epid,
@@ -508,7 +469,7 @@ void VideoDetail::requestVideoRelationInfo(size_t epid) {
 }
 
 /// 获取视频弹幕
-void VideoDetail::requestVideoDanmaku(int cid) {
+void VideoDetail::requestVideoDanmaku(uint64_t cid) {
     brls::Logger::debug("请求弹幕：cid: {}", cid);
     ASYNC_RETAIN
     BILI::get_danmaku(
@@ -554,7 +515,7 @@ void VideoDetail::requestVideoDanmaku(int cid) {
 }
 
 /// 获取视频分P详情
-void VideoDetail::requestVideoPageDetail(const std::string& bvid, int cid, bool requestVideoHistory) {
+void VideoDetail::requestVideoPageDetail(const std::string& bvid, uint64_t cid, bool requestVideoHistory) {
     brls::Logger::debug("请求字幕：bvid: {} cid: {}", bvid, cid);
     ASYNC_RETAIN
     BILI::get_page_detail(
@@ -608,7 +569,7 @@ void VideoDetail::requestVideoPageDetail(const std::string& bvid, int cid, bool 
 }
 
 /// 上报历史记录
-void VideoDetail::reportHistory(unsigned int aid, unsigned int cid, unsigned int progress, unsigned int duration,
+void VideoDetail::reportHistory(uint64_t aid, uint64_t cid, unsigned int progress, unsigned int duration,
                                 int type) {
     if (!REPORT_HISTORY) return;
     if (aid == 0 || cid == 0) return;
@@ -616,7 +577,7 @@ void VideoDetail::reportHistory(unsigned int aid, unsigned int cid, unsigned int
     std::string mid   = ProgramConfig::instance().getUserID();
     std::string token = ProgramConfig::instance().getCSRF();
     if (mid.empty() || token.empty()) return;
-    unsigned int sid = 0, epid = 0;
+    uint64_t sid = 0, epid = 0;
     if (type == 4) {
         sid  = seasonInfo.season_id;
         epid = episodeResult.id;
@@ -635,7 +596,7 @@ int VideoDetail::getCoinTolerate() {
 }
 
 /// 点赞
-void VideoDetail::beAgree(int aid) {
+void VideoDetail::beAgree(uint64_t aid) {
     std::string csrf = ProgramConfig::instance().getCSRF();
     if (csrf.empty()) return;
 
@@ -663,7 +624,7 @@ void VideoDetail::beAgree(int aid) {
 }
 
 /// 投币
-void VideoDetail::addCoin(int aid, int num, bool like) {
+void VideoDetail::addCoin(uint64_t aid, int num, bool like) {
     std::string csrf = ProgramConfig::instance().getCSRF();
     if (csrf.empty()) return;
     if (num < 1 || num > 2) return;
@@ -697,7 +658,7 @@ void VideoDetail::addCoin(int aid, int num, bool like) {
 }
 
 /// 收藏
-void VideoDetail::addResource(int aid, int type, bool isFavorite, std::string add, std::string del) {
+void VideoDetail::addResource(uint64_t aid, int type, bool isFavorite, std::string add, std::string del) {
     std::string csrf = ProgramConfig::instance().getCSRF();
     if (csrf.empty()) return;
 
@@ -726,7 +687,7 @@ void VideoDetail::addResource(int aid, int type, bool isFavorite, std::string ad
         });
 }
 
-void VideoDetail::requestHighlightProgress(int cid) {
+void VideoDetail::requestHighlightProgress(uint64_t cid) {
     brls::Logger::debug("请求高能进度条：cid: {}", cid);
     ASYNC_RETAIN
     BILI::get_highlight_progress(
@@ -770,7 +731,7 @@ void VideoDetail::followUp(const std::string& mid, bool follow) {
         });
 }
 
-void VideoDetail::followSeason(size_t season, bool follow) {
+void VideoDetail::followSeason(uint64_t season, bool follow) {
     std::string csrf = ProgramConfig::instance().getCSRF();
     if (csrf.empty()) return;
 
