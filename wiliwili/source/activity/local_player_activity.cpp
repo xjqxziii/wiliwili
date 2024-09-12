@@ -21,7 +21,7 @@ void LocalPlayerActivity::onContentAvailable() {
     this->video->hideVideoRelatedSetting();
     this->video->hideDLNAButton();
 
-    this->video->setUrl(this->filepath);
+    this->video->setUrl(this->filepath.string());
     this->video->setTitle(this->filepath.filename().string());
     MPV_E->fire(MpvEventEnum::RESET);
 }
