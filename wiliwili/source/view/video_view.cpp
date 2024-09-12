@@ -1062,6 +1062,11 @@ void VideoView::hideSubtitleSetting() { showSubtitleSetting = false; }
 
 void VideoView::hideBottomLineSetting() { showBottomLineSetting = false; }
 
+void VideoView::hideOnlineCount() {
+    this->videoOnlineCountLabel->setVisibility(brls::Visibility::GONE);
+    this->videoOnlineCountLabel->getParent()->setVisibility(brls::Visibility::GONE);
+}
+
 void VideoView::hideHighlightLineSetting() { showHighlightLineSetting = false; }
 
 void VideoView::hideSkipOpeningCreditsSetting() { showOpeningCreditsSetting = false; }

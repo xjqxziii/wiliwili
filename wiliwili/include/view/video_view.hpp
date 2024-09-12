@@ -131,6 +131,8 @@ public:
 
     void hideBottomLineSetting();
 
+    void hideOnlineCount();
+
     void hideHighlightLineSetting();
 
     void hideSkipOpeningCreditsSetting();

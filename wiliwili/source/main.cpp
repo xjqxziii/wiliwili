@@ -13,6 +13,7 @@
 //#define NO_GA
 
 #include <borealis.hpp>
+#include <cpr/filesystem.h>
 
 #include "utils/config_helper.hpp"
 #include "utils/activity_helper.hpp"
@@ -23,6 +24,7 @@
 #endif
 
 int main(int argc, char* argv[]) {
+    cpr::fs::path localFile;
     for (int i = 1; i < argc; i++) {
         if (std::strcmp(argv[i], "-d") == 0) {
             brls::Logger::setLogLevel(brls::LogLevel::LOG_DEBUG);
@@ -33,6 +35,11 @@ int main(int argc, char* argv[]) {
         } else if (std::strcmp(argv[i], "-o") == 0) {
             const char* path = (i + 1 < argc) ? argv[++i] : "wiliwili.log";
             brls::Logger::setLogOutput(std::fopen(path, "w+"));
+        } else {
+            cpr::fs::path localPath(argv[i]);
+            if (is_regular_file(localPath)) {
+                localFile = localPath;
+            }
         }
     }
 
@@ -59,7 +66,11 @@ int main(int argc, char* argv[]) {
     brls::Application::getPlatform()->disableScreenDimming(false);
 
     if (brls::Application::getPlatform()->isApplicationMode()) {
-        Intent::openMain();
+        if (exists(localFile)) {
+            Intent::openLocal(localFile);
+        } else {
+            Intent::openMain();
+        }
         // Uncomment these lines to debug activities
         //        Intent::openBV("BV1Da411Y7U4");  // 弹幕防遮挡 (横屏)
         //        Intent::openBV("BV1iN4y1m7J3");  // 弹幕防遮挡 (竖屏)
