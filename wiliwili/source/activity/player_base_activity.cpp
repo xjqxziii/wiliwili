@@ -22,9 +22,9 @@
 #include "view/subtitle_core.hpp"
 #include "view/mpv_core.hpp"
 
-class DataSourceCommentList : public RecyclingGridDataSource, public CommentRequest {
+class DataSourceCommentList : public RecyclingGridDataSource, public CommentAction {
 public:
-    DataSourceCommentList(bilibili::VideoCommentListResult result, size_t aid, int mode, std::function<void(void)> cb)
+    DataSourceCommentList(bilibili::VideoCommentListResult result, uint64_t aid, int mode, std::function<void(void)> cb)
         : dataList(std::move(result)), aid(aid), commentMode(mode), switchModeCallback(cb) {}
     RecyclingGridItem* cellForRow(RecyclingGrid* recycler, size_t index) override {
         if (index == 0) {
@@ -66,13 +66,13 @@ public:
             brls::Application::getImeManager()->openForText(
                 [this, recycler](const std::string& text) {
                     if (text.empty()) return;
-                    this->commentReply(text, aid, 0, 0,
+                    this->commentReply(text, std::to_string(aid), 0, 0, 1,
                                        [this, recycler](const bilibili::VideoCommentAddResult& result) {
                                            this->dataList.insert(dataList.begin(), result.reply);
                                            recycler->reloadData();
                                        });
                 },
-                "", "", 500, "", 0);
+                "wiliwili/player/single_comment/hint"_i18n, "", 500, "", 0);
             return;
         }
 
@@ -80,14 +80,14 @@ public:
         if (!item) return;
 
         auto* view = new PlayerSingleComment();
-        view->setCommentData(dataList[index - 2], item->getY());
+        view->setCommentData(dataList[index - 2], item->getY(), 1);
         auto container = new brls::AppletFrame(view);
         container->setHeaderVisibility(brls::Visibility::GONE);
         container->setFooterVisibility(brls::Visibility::GONE);
         container->setInFadeAnimation(true);
         brls::Application::pushActivity(new brls::Activity(container));
 
-        view->likeStateEvent.subscribe([this, item, index](bool value) {
+        view->likeStateEvent.subscribe([this, item, index](size_t value) {
             auto& itemData  = dataList[index - 2];
             itemData.action = value;
             item->setLiked(value);
@@ -128,7 +128,7 @@ public:
 
 private:
     bilibili::VideoCommentListResult dataList;
-    size_t aid;
+    uint64_t aid;
     int commentMode                              = 3;  // 2: 按时间；3: 按热度
     std::function<void(void)> switchModeCallback = nullptr;
 };
@@ -339,6 +339,9 @@ void BasePlayerActivity::setCommonData() {
                     }
                 }
                 break;
+            case MpvEventEnum::RESTART:
+                this->updateVideoLink();
+                break;
             default:
                 break;
         }
@@ -357,25 +360,7 @@ void BasePlayerActivity::setCommonData() {
     video->hideOSDLockButton();
 }
 
-void BasePlayerActivity::showShareDialog(const std::string& link) {
-    auto container = new brls::Box(brls::Axis::COLUMN);
-    container->setJustifyContent(brls::JustifyContent::CENTER);
-    container->setAlignItems(brls::AlignItems::CENTER);
-    auto qr = new QRImage();
-    qr->setSize(brls::Size(256, 256));
-    qr->setImageFromQRContent(link);
-    qr->setMargins(20, 10, 10, 10);
-    container->addView(qr);
-    auto hint = new brls::Label();
-    hint->setText("wiliwili/player/qr"_i18n);
-    hint->setMargins(0, 10, 10, 10);
-    container->addView(hint);
-    auto dialog = new brls::Dialog(container);
-    dialog->addButton("hints/ok"_i18n, []() {});
-    dialog->open();
-}
-
-void BasePlayerActivity::showCollectionDialog(int64_t id, int videoType) {
+void BasePlayerActivity::showCollectionDialog(uint64_t id, int videoType) {
     if (!DialogHelper::checkLogin()) return;
     auto playerCollection = new PlayerCollection(id, videoType);
     auto dialog           = new brls::Dialog(playerCollection);
@@ -395,7 +380,7 @@ void BasePlayerActivity::showCollectionDialog(int64_t id, int videoType) {
     dialog->open();
 }
 
-void BasePlayerActivity::showCoinDialog(size_t aid) {
+void BasePlayerActivity::showCoinDialog(uint64_t aid) {
     if (!DialogHelper::checkLogin()) return;
 
     if (std::to_string(videoDetailResult.owner.mid) == ProgramConfig::instance().getUserID()) {
@@ -417,6 +402,26 @@ void BasePlayerActivity::showCoinDialog(size_t aid) {
     dialog->open();
 }
 
+void BasePlayerActivity::updateVideoLink() {
+    // 设置视频加载后跳转的时间
+    setProgress(MPVCore::instance().video_progress);
+
+    // dash
+    if (!this->videoUrlResult.dash.video.empty()) {
+        // dash格式的视频无需重复请求视频链接，这里简单的设置清晰度即可
+        videoUrlResult.quality = BasePlayerActivity::defaultQuality;
+        this->onVideoPlayUrl(videoUrlResult);
+        return;
+    }
+
+    // flv
+    if (dynamic_cast<PlayerSeasonActivity*>(this)) {
+        this->requestSeasonVideoUrl(episodeResult.bvid, episodeResult.cid);
+    } else {
+        this->requestVideoUrl(videoDetailResult.bvid, videoDetailPage.cid);
+    }
+}
+
 void BasePlayerActivity::setVideoQuality() {
     if (this->videoUrlResult.accept_description.empty()) return;
 
@@ -433,24 +438,7 @@ void BasePlayerActivity::setVideoQuality() {
                 return;
             }
 
-            // 设置视频加载后跳转的时间
-            setProgress(MPVCore::instance().video_progress);
-
-            // dash
-            if (!this->videoUrlResult.dash.video.empty()) {
-                // dash格式的视频无需重复请求视频链接，这里简单的设置清晰度即可
-                videoUrlResult.quality = BasePlayerActivity::defaultQuality;
-                this->onVideoPlayUrl(videoUrlResult);
-                return;
-            }
-
-            // flv
-            auto self = dynamic_cast<PlayerSeasonActivity*>(this);
-            if (self) {
-                this->requestSeasonVideoUrl(episodeResult.bvid, episodeResult.cid);
-            } else {
-                this->requestVideoUrl(videoDetailResult.bvid, videoDetailPage.cid);
-            }
+            this->updateVideoLink();
         },
         getQualityIndex());
     auto* recycler = dropdown->getRecyclingList();
@@ -477,7 +465,7 @@ void BasePlayerActivity::setCommentMode() {
     this->recyclingGrid->estimatedRowHeight = 100;
     this->recyclingGrid->showSkeleton();
     tabFrame->focusTab(0);
-    requestVideoComment(this->getAid(), 0, getVideoCommentMode() == 3 ? 2 : 3);
+    requestVideoComment(std::to_string(this->getAid()), 0, getVideoCommentMode() == 3 ? 2 : 3);
 }
 
 void BasePlayerActivity::onVideoPlayUrl(const bilibili::VideoUrlResult& result) {
@@ -680,7 +668,8 @@ void BasePlayerActivity::onVideoRelationInfo(const bilibili::VideoRelation& resu
 
 void BasePlayerActivity::onHighlightProgress(const bilibili::VideoHighlightProgress& result) {
     brls::Logger::debug("highlight: {}/{}", result.step_sec, result.data.size());
-    this->video->setHighlightProgress(result.step_sec, result.data);
+    VideoHighlightData data{result.step_sec, result.data};
+    APP_E->fire(VideoView::HIGHLIGHT_INFO, (void*)&data);
 }
 
 void BasePlayerActivity::setRelationButton(bool liked, bool coin, bool favorite) {
@@ -707,7 +696,10 @@ void BasePlayerActivity::onError(const std::string& error) {
     MPVCore::instance().reset();
     bool forceClose = true;
     std::string msg = error;
-    if (pystring::count(error, "10403") > 0) {
+    if (pystring::count(error, "87007") > 0 || pystring::count(error, "87008") > 0) {
+        forceClose = false;
+        msg        = "该视频为「充电」专属视频";
+    } else if (pystring::count(error, "10403") > 0) {
         forceClose = false;
         msg        = "大会员专享限制";
     } else if (pystring::count(error, "404") > 0) {

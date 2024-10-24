@@ -142,6 +142,8 @@ const std::string Comment = _apiBase + "/x/v2/reply/main";
 const std::string CommentDetail = _apiBase + "/x/v2/reply/detail";
 /// 点赞评论
 const std::string CommentLike = _apiBase + "/x/v2/reply/action";
+/// 点踩评论
+const std::string CommentDisLike = _apiBase + "/x/v2/reply/hate";
 /// 发布评论
 const std::string CommentAdd = _apiBase + "/x/v2/reply/add";
 /// 删除评论
@@ -169,7 +171,15 @@ const std::string CollectionVideoList     = _apiBase + "/x/v3/fav/resource/list"
 const std::string CollectionVideoListSave = _apiBase + "/x/v3/fav/resource/deal";
 const std::string UserUploadedVideo       = _apiBase + "/x/space/arc/search";
 const std::string UserRelationStat        = _apiBase + "/x/relation/stat";
-const std::string UserDynamicStat         = _vcBase + "/dynamic_svr/v1/dynamic_svr/space_num_ex";
+const std::string MsgFeedLike             = _apiBase + "/x/msgfeed/like";
+const std::string MsgFeedAt               = _apiBase + "/x/msgfeed/at";
+const std::string MsgFeedReply            = _apiBase + "/x/msgfeed/reply";
+const std::string UserCards               = _vcBase + "/account/v1/user/cards";
+const std::string UserDynamicStat         = _apiBase + "/x/dynamic/feed/space/dyn_num";
+const std::string ChatSessions            = _vcBase + "/session_svr/v1/session_svr/new_sessions";
+const std::string ChatUpdateAct           = _vcBase + "/session_svr/v1/session_svr/update_ack";
+const std::string ChatFetchMsgs           = _vcBase + "/svr_sync/v1/svr_sync/fetch_session_msgs";
+const std::string ChatSendMsg             = _vcBase + "/web_im/v1/web_im/send_msg";
 /// 用户追番/追剧
 const std::string UserBangumiCollection = _apiBase + "/x/space/bangumi/follow/list";
 /// 用户订阅合集列表
@@ -190,8 +200,12 @@ const std::string SearchHots = _apiBase + "/x/web-interface/search/square";
 /// 动态页API
 /// ===
 const std::string DynamicVideo     = _apiBase + "/x/polymer/web-dynamic/desktop/v1/feed/video";
+const std::string DynamicArticle   = _apiBase + "/x/polymer/web-dynamic/desktop/v1/feed/all";
 const std::string DynamicUpList    = _vcBase + "/dynamic_svr/v1/dynamic_svr/w_dyn_uplist";
+const std::string DynamicUpListV2  = _apiBase + "/x/polymer/web-dynamic/v1/uplist";
+const std::string DynamicLike      = _vcBase + "/dynamic_like/v1/dynamic_like/thumb";
 const std::string UserDynamicVideo = _apiBase + "/x/space/arc/list";
+const std::string DynamicDetail    = _apiBase + "/x/polymer/web-dynamic/desktop/v1/detail";
 
 /// ===
 /// 设置页API

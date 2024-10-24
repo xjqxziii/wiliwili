@@ -10,6 +10,7 @@
 #include <borealis/core/application.hpp>
 #include <borealis/core/thread.hpp>
 #include <borealis/views/dialog.hpp>
+#include <borealis/platforms/desktop/steam_deck.hpp>
 
 #include "utils/config_helper.hpp"
 #include "utils/dialog_helper.hpp"
@@ -39,7 +40,7 @@ std::string APPVersion::getPlatform() {
 #elif defined(PS4)
     return "PS4";
 #elif defined(__linux__)
-    if (getenv("SteamDeck")) return "SteamDeck";
+    if (brls::isSteamDeck()) return "SteamDeck";
     return "Linux";
 #elif defined(__WINRT__)
     return "UWP";
@@ -66,7 +67,7 @@ bool APPVersion::needUpdate(std::string latestVersion) {
     std::vector<std::string> v;
     pystring::split(latestVersion, v, ".");
     if (v.size() < 3) {
-        brls::Logger::error("Cannot parse version info");
+        brls::Logger::error("Cannot parse version info: {}", latestVersion);
         return false;
     }
     if (atoi(v[0].c_str()) > major) return true;
@@ -76,20 +77,44 @@ bool APPVersion::needUpdate(std::string latestVersion) {
 }
 
 void APPVersion::checkUpdate(int delay, bool showUpToDateDialog) {
+    static bool checking_update = false;
+    if (checking_update) return;
+    checking_update = true;
     brls::Threading::delay(delay, [showUpToDateDialog]() {
         std::string url =
             ProgramConfig::instance().getSettingItem(SettingItem::CUSTOM_UPDATE_API, APPVersion::RELEASE_API);
 
         cpr::GetCallback(
             [showUpToDateDialog](cpr::Response r) {
+                checking_update = false;
                 try {
-                    nlohmann::json res = nlohmann::json::parse(r.text);
+                    if (showUpToDateDialog && r.status_code == 403) {
+                        // GitHub api limited
+                        if (const nlohmann::json res = nlohmann::json::parse(r.text); res.contains("message")) {
+                            auto msg = res.at("message").get<std::string>();
+                            brls::sync([msg]() { brls::Application::notify(msg); });
+                        }
+                        return;
+                    }
+                    if (r.status_code != 200 || r.text.empty()) {
+                        brls::Logger::error("Cannot check update: {} {}", r.status_code, r.error.message);
+                        if (showUpToDateDialog) {
+                            auto msg = r.reason;
+                            brls::sync([msg]() { brls::Application::notify(msg); });
+                        }
+                        return;
+                    }
+                    const nlohmann::json res = nlohmann::json::parse(r.text);
                     auto info          = res.get<ReleaseNote>();
+                    if (info.tag_name.empty()) {
+                        brls::Logger::error("Cannot parse update info, tag_name is empty");
+                        return;
+                    }
                     if (!APPVersion::instance().needUpdate(info.tag_name)) {
                         brls::Logger::info("App is up to date");
                         if (showUpToDateDialog) {
                             brls::sync(
-                                []() { DialogHelper::showDialog("wiliwili/setting/tools/others/up2date"_i18n); });
+                                []() { brls::Application::notify("wiliwili/setting/tools/others/up2date"_i18n); });
                         }
                         return;
                     }

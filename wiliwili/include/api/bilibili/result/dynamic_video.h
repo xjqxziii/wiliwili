@@ -4,15 +4,16 @@
 
 #pragma once
 
-#include "nlohmann/json.hpp"
+#include "bilibili/util/json.hpp"
 #include "user_result.h"
 #include "home_result.h"
+#include "dynamic_article.h"
 
 namespace bilibili {
 
 class DynamicVideoResult {
 public:
-    int aid = 0;
+    uint64_t aid = 0;
     std::string bvid;
     std::string pic;
     std::string title;
@@ -40,36 +41,34 @@ inline void from_json(const nlohmann::json& nlohmann_json_j, DynamicVideoResult&
 }
 
 typedef std::vector<DynamicVideoResult> DynamicVideoListResult;
+typedef std::vector<DynamicArticleResult> DynamicArticleListResult;
 
-class DynamicVideoListResultWrapper {
+template <typename Item>
+class DynamicListResultWrapper {
 public:
-    DynamicVideoListResult items;
-    bool has_more;
+    Item items;
+    bool has_more{};
     std::string offset;
     std::string update_baseline;
-    unsigned int update_num;
-    unsigned int page;
+    unsigned int update_num{};
+    unsigned int page{};
 };
-inline void from_json(const nlohmann::json& nlohmann_json_j, DynamicVideoListResultWrapper& nlohmann_json_t) {
+template <typename Item>
+inline void from_json(const nlohmann::json& nlohmann_json_j, DynamicListResultWrapper<Item>& nlohmann_json_t) {
     if (nlohmann_json_j.contains("items") && nlohmann_json_j.at("items").is_array()) {
         nlohmann_json_j.at("items").get_to(nlohmann_json_t.items);
     }
     NLOHMANN_JSON_EXPAND(NLOHMANN_JSON_PASTE(NLOHMANN_JSON_FROM, has_more, offset, update_baseline, update_num));
 }
 
-class DynamicUp {
-public:
-    UserSimpleResult3 info;
-};
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(DynamicUp, info);
-
 class DynamicUpResult {
 public:
-    unsigned int has_update;
-    bool is_reserve_recall;
-    DynamicUp user_profile;
+    bool has_update;
+    std::string face;
+    std::string uname;
+    uint64_t mid;
 };
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(DynamicUpResult, is_reserve_recall, has_update, user_profile);
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(DynamicUpResult, has_update, face, uname, mid);
 
 typedef std::vector<DynamicUpResult> DynamicUpListResult;
 

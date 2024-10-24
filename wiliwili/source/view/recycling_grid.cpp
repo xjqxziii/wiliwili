@@ -126,6 +126,12 @@ RecyclingGrid::RecyclingGrid() {
         this->reloadData();
     });
 
+    this->registerPercentageXMLAttribute("paddingRight",
+                                         [this](float percentage) { this->setPaddingRightPercentage(percentage); });
+
+    this->registerPercentageXMLAttribute("paddingLeft",
+                                         [this](float percentage) { this->setPaddingLeftPercentage(percentage); });
+
     this->registerCell("Skeleton", []() { return SkeletonCell::create(); });
     this->showSkeleton();
 }
@@ -180,9 +186,9 @@ void RecyclingGrid::addCellAt(size_t index, bool downSide) {
     cell = dataSource->cellForRow(this, index);
 
     float cellHeight = estimatedRowHeight;
-    float cellWidth  = (renderedFrame.getWidth() - paddingLeft - paddingRight) / spanCount - cell->getMarginLeft() -
-                      cell->getMarginRight();
-    float cellX = renderedFrame.getMinX() + paddingLeft;
+    float cellWidth  = (renderedFrame.getWidth() - getPaddingLeft() - getPaddingRight()) / spanCount -
+                      cell->getMarginLeft() - cell->getMarginRight();
+    float cellX = renderedFrame.getMinX() + getPaddingLeft();
 
     if (isFlowMode) {
         // 必须在 getHeight 前设置宽度，否则会影响到cell自定义高度的判定
@@ -203,7 +209,7 @@ void RecyclingGrid::addCellAt(size_t index, bool downSide) {
         brls::Logger::verbose("Add cell at: y {} height {}", getHeightByCellIndex(index) + paddingTop, cellHeight);
     } else {
         cell->setWidth(cellWidth - estimatedRowSpace);
-        cellX += (renderedFrame.getWidth() - paddingLeft - paddingRight) / spanCount * (index % spanCount);
+        cellX += (renderedFrame.getWidth() - getPaddingLeft() - getPaddingRight()) / spanCount * (index % spanCount);
     }
 
     cell->setHeight(cellHeight);
@@ -265,6 +271,11 @@ void RecyclingGrid::reloadData() {
 
     renderedFrame            = brls::Rect();
     renderedFrame.size.width = getWidth();
+    if (renderedFrame.size.width != renderedFrame.size.width) {
+        // 当列表在展示骨架屏后被隐藏，这时获取到 width 的值为 NAN
+        // 使用历史宽度值避免后续计算错误
+        renderedFrame.size.width = oldWidth;
+    }
 
     setContentOffsetY(0, false);
     if (dataSource == nullptr) return;
@@ -416,6 +427,9 @@ void RecyclingGrid::itemsRecyclingLoop() {
                              getHeightByCellIndex(visibleMax, visibleMax - preFetchLine * spanCount) <=
                          visibleFrame.getMaxY()))
             break;
+        if (visibleMax == 0) {
+            break;
+        }
 
         float cellHeight = estimatedRowHeight;
         if (isFlowMode) cellHeight = cellHeightCache[visibleMax];
@@ -636,10 +650,11 @@ void RecyclingGrid::queueReusableCell(RecyclingGridItem* cell) {
 void RecyclingGrid::setPadding(float padding) { this->setPadding(padding, padding, padding, padding); }
 
 void RecyclingGrid::setPadding(float top, float right, float bottom, float left) {
-    paddingTop    = top;
-    paddingRight  = right;
-    paddingBottom = bottom;
-    paddingLeft   = left;
+    paddingPercentage = false;
+    paddingTop        = top;
+    paddingRight      = right;
+    paddingBottom     = bottom;
+    paddingLeft       = left;
 
     this->reloadData();
 }
@@ -650,7 +665,8 @@ void RecyclingGrid::setPaddingTop(float top) {
 }
 
 void RecyclingGrid::setPaddingRight(float right) {
-    paddingRight = right;
+    paddingPercentage = false;
+    paddingRight      = right;
     this->reloadData();
 }
 
@@ -660,8 +676,27 @@ void RecyclingGrid::setPaddingBottom(float bottom) {
 }
 
 void RecyclingGrid::setPaddingLeft(float left) {
-    paddingLeft = left;
+    paddingPercentage = false;
+    paddingLeft       = left;
     this->reloadData();
+}
+
+void RecyclingGrid::setPaddingRightPercentage(float right) {
+    paddingPercentage = true;
+    paddingRight      = right / 100.0f;
+}
+
+void RecyclingGrid::setPaddingLeftPercentage(float left) {
+    paddingPercentage = true;
+    paddingLeft       = left / 100.0f;
+}
+
+float RecyclingGrid::getPaddingLeft() {
+    return paddingPercentage ? renderedFrame.getWidth() * paddingLeft : paddingLeft;
+}
+
+float RecyclingGrid::getPaddingRight() {
+    return paddingPercentage ? renderedFrame.getWidth() * paddingRight : paddingRight;
 }
 
 brls::View* RecyclingGrid::getDefaultFocus() {

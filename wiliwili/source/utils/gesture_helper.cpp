@@ -4,6 +4,7 @@
 
 #include <borealis/core/thread.hpp>
 #include <borealis/core/view.hpp>
+#include <borealis/core/application.hpp>
 
 #include "utils/gesture_helper.hpp"
 
@@ -12,7 +13,7 @@
 #define MAX_DELTA_MOVEMENT 24
 
 // Time in ms to recognize long press
-#define LONG_TIME_MS 200  // 200ms
+#define LONG_TIME_MS 250  // 250ms
 #define LONG_TIME_US (LONG_TIME_MS * 1000)
 
 OsdGestureRecognizer::OsdGestureRecognizer(const OsdGestureEvent::Callback& respond) {
@@ -67,6 +68,7 @@ brls::GestureState OsdGestureRecognizer::recognitionLoop(brls::TouchState touch,
 
     switch (phase) {
         case brls::TouchPhase::START:
+            brls::Application::giveFocus(view);
             this->startTime = brls::getCPUTimeUsec();
             if (this->startTime - this->endTime < LONG_TIME_US) {
                 brls::cancelDelay(iter);

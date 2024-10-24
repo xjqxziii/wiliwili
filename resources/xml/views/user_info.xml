@@ -6,8 +6,8 @@
         alignItems="center">
 
     <brls:Box
-            width="18%"
             wireframe="false"
+            marginRight="4"
             axis="column">
         <brls:Image
                 id="userinfo/avatar"
@@ -37,8 +37,10 @@
                 wireframe="false"
                 grow="1"
                 fontSize="20"
-                marginBottom="8"
-                verticalAlign="bottom"/>
+                marginBottom="4"
+                verticalAlign="center"
+                singleLine="true"
+                shrink="0"/>
 
         <brls:Label
                 id="userinfo/label/misc"
@@ -46,8 +48,10 @@
                 height="auto"
                 fontSize="16"
                 grow="1"
-                marginTop="8"
-                verticalAlign="top"
+                marginTop="4"
+                verticalAlign="center"
+                singleLine="true"
+                shrink="0"
                 wireframe="false"
                 textColor="@theme/font/grey"/>
 

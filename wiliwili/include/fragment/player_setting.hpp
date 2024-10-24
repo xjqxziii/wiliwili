@@ -8,7 +8,7 @@
 #include <borealis/core/bind.hpp>
 
 class ButtonClose;
-class SelectorCell;
+class BiliSelectorCell;
 enum class SettingItem;
 namespace brls {
 class ScrollingFrame;
@@ -53,7 +53,7 @@ public:
 
     void hideSkipOpeningCreditsSetting();
 
-    void setBangumiCustomSetting(const std::string& title, unsigned int seasonId);
+    void setBangumiCustomSetting(const std::string& title, uint64_t seasonId);
 
 private:
     BRLS_BIND(ButtonClose, closebtn, "button/close");
@@ -71,12 +71,13 @@ private:
 
     // common setting
     BRLS_BIND(brls::BooleanCell, btnFullscreen, "setting/fullscreen");
+    BRLS_BIND(BiliSelectorCell, btnOnTopMode, "setting/onTopMode");
     BRLS_BIND(brls::BooleanCell, btnProgress, "setting/video/progress");
     BRLS_BIND(brls::BooleanCell, btnHistory, "setting/history/log");
     BRLS_BIND(brls::DetailCell, btnPlayStrategy, "setting/play/strategy");
     BRLS_BIND(brls::BooleanCell, btnExitFullscreen, "setting/auto/exit");
     BRLS_BIND(brls::BooleanCell, btnMirror, "setting/video/mirror");
-    BRLS_BIND(SelectorCell, btnAspect, "setting/video/aspect");
+    BRLS_BIND(BiliSelectorCell, btnAspect, "setting/video/aspect");
     BRLS_BIND(brls::BooleanCell, btnHighlight, "setting/video/highlight");
     BRLS_BIND(brls::DetailCell, btnSleep, "setting/sleep");
     BRLS_BIND(brls::BooleanCell, btnSkip, "setting/auto/skip");
@@ -92,15 +93,15 @@ private:
     // bangumi custom setting
     BRLS_BIND(brls::Header, bangumiHeader, "setting/video/custom/header");
     BRLS_BIND(brls::Box, bangumiBox, "setting/video/custom/box");
-    BRLS_BIND(SelectorCell, btnCustomAspect, "setting/video/custom/aspect");
+    BRLS_BIND(BiliSelectorCell, btnCustomAspect, "setting/video/custom/aspect");
     BRLS_BIND(brls::BooleanCell, btnClip, "setting/video/custom/clip");
     BRLS_BIND(brls::InputNumericCell, btnClipStart, "setting/video/custom/clip/start");
     BRLS_BIND(brls::InputNumericCell, btnClipEnd, "setting/video/custom/clip/end");
 
-    unsigned int seasonId{};
+    uint64_t seasonId{};
 
-    // 获取需要现实的倒计时关闭字符串
-    static inline std::string getCountdown(size_t now);
+    // 更新倒计时
+    void updateCountdown(size_t now);
 
     void setupEqualizerSetting(brls::SliderCell* cell, const std::string& title, SettingItem item, int initValue);
 

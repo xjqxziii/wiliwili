@@ -50,14 +50,11 @@ public:
     // 设置 点赞、收藏、投币 三个按钮的样式
     void setRelationButton(bool liked, bool coin, bool favorite);
 
-    // 展示二维码共享对话框
-    void showShareDialog(const std::string& link);
-
     // 展示收藏列表对话框
-    void showCollectionDialog(int64_t id, int videoType);
+    void showCollectionDialog(uint64_t id, int videoType);
 
     // 展示投币对话框
-    void showCoinDialog(size_t aid);
+    void showCoinDialog(uint64_t aid);
 
     // 设置清晰度
     void setVideoQuality();
@@ -85,7 +82,7 @@ public:
     virtual void reportCurrentProgress(size_t progress, size_t duration) = 0;
 
     // 获取当前视频的aid
-    virtual size_t getAid() = 0;
+    virtual uint64_t getAid() = 0;
 
     // 获取投屏链接
     virtual void requestCastUrl() = 0;
@@ -108,7 +105,7 @@ public:
     inline static bool PLAYER_SKIP_OPENING_CREDITS = true;
 
 protected:
-    BRLS_BIND(VideoView, video, "video/detail/video");
+    BRLS_BIND(VideoView, video, "video");
     BRLS_BIND(brls::AppletFrame, appletFrame, "video/detail/frame");
     BRLS_BIND(UserInfoView, videoUserInfo, "video_author");
     BRLS_BIND(brls::Box, videoTitleBox, "video/title/box");
@@ -140,11 +137,14 @@ protected:
 private:
     bool activityShown = false;
     std::chrono::system_clock::time_point videoDeadline{};
+
+    // 重新选择当前清晰度的播放链接播放
+    void updateVideoLink();
 };
 
 class PlayerActivity : public BasePlayerActivity {
 public:
-    PlayerActivity(const std::string& bvid, unsigned int cid = 0, int progress = -1);
+    PlayerActivity(const std::string& bvid, uint64_t cid = 0, int progress = -1);
 
     void setProgress(int p) override;
     int getProgress() override;
@@ -161,7 +161,7 @@ public:
     void onRelatedVideoList(const bilibili::VideoDetailListResult& result) override;
     void onRedirectToEp(const std::string& url) override;
     void onCastPlayUrl(const bilibili::VideoUrlResult& result) override;
-    size_t getAid() override;
+    uint64_t getAid() override;
 
     void onContentAvailable() override;
 
@@ -205,9 +205,9 @@ public:
     void onCastPlayUrl(const bilibili::VideoUrlResult& result) override;
 
     // 正在播放的情况下切换到新的番剧
-    void playSeason(size_t season_id);
+    void playSeason(uint64_t season_id);
 
-    size_t getAid() override;
+    uint64_t getAid() override;
 
 private:
     unsigned int pgc_id;

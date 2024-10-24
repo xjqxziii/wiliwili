@@ -6,6 +6,7 @@
 #include <borealis/core/touch/tap_gesture.hpp>
 
 #include "view/grid_dropdown.hpp"
+#include "view/svg_image.hpp"
 
 /// EmptyDropDown
 
@@ -92,7 +93,7 @@ void TextDataSourceDropdown::clearData() { this->data.clear(); }
 
 /// BaseDropdown
 
-BaseDropdown::BaseDropdown(const std::string& title, ValueSelectedEvent::Callback cb, int selected)
+BaseDropdown::BaseDropdown(const std::string& title, ValueSelectedEvent::Callback cb, size_t selected)
     : cb(std::move(cb)), selected(selected) {
     this->inflateFromXMLRes("xml/views/grid_dropdown.xml");
     this->title->setText(title);
@@ -141,7 +142,7 @@ size_t BaseDropdown::getSelected() const { return this->selected; }
 ValueSelectedEvent::Callback BaseDropdown::getSelectCallback() { return this->cb; }
 
 BaseDropdown* BaseDropdown::text(const std::string& title, const std::vector<std::string>& values,
-                                 ValueSelectedEvent::Callback cb, int selected) {
+                                 ValueSelectedEvent::Callback cb, size_t selected, const std::string& hint) {
     auto* dropdown = new BaseDropdown(title, std::move(cb), selected);
     dropdown->getRecyclingList()->registerCell("Cell", []() {
         auto* cell = new GridRadioCell();
@@ -149,6 +150,22 @@ BaseDropdown* BaseDropdown::text(const std::string& title, const std::vector<std
         cell->title->setFontSize(brls::Application::getStyle()["brls/dropdown/listItemTextSize"]);
         return cell;
     });
+    if (!hint.empty()) {
+        auto box = new brls::Box();
+        box->setMargins(20, 10, 10, 30);
+        box->setAlignItems(brls::AlignItems::CENTER);
+        auto icon = new SVGImage();
+        icon->setDimensions(12, 13);
+        icon->setMarginRight(10);
+        icon->setImageFromSVGRes("svg/ico-sprite-info.svg");
+        auto text = new brls::Label();
+        text->setFontSize(18);
+        text->setTextColor(brls::Application::getTheme().getColor("font/grey"));
+        text->setText(hint);
+        box->addView(icon);
+        box->addView(text);
+        dropdown->getContentView()->addView(box);
+    }
     dropdown->setDataSource(new TextDataSourceDropdown(values, dropdown));
     brls::Application::pushActivity(new brls::Activity(dropdown));
     return dropdown;

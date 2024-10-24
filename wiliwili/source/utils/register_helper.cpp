@@ -19,12 +19,15 @@
 #include "fragment/mine_collection.hpp"
 #include "fragment/mine_collection_video_list.hpp"
 #include "fragment/mine_bangumi.hpp"
+#include "fragment/inbox_feed.hpp"
 #include "fragment/search_tab.hpp"
+#include "fragment/search_order.hpp"
 #include "fragment/search_video.hpp"
 #include "fragment/search_cinema.hpp"
 #include "fragment/search_bangumi.hpp"
 #include "fragment/search_hots.hpp"
 #include "fragment/search_history.hpp"
+#include "fragment/share_dialog.hpp"
 
 #include "utils/config_helper.hpp"
 
@@ -48,6 +51,8 @@
 #include "view/selector_cell.hpp"
 #include "view/hint_label.hpp"
 #include "view/mpv_core.hpp"
+#include "view/dynamic_video_card.hpp"
+#include "view/dynamic_article.hpp"
 
 void Register::initCustomView() {
     // Register extended views
@@ -68,9 +73,12 @@ void Register::initCustomView() {
     brls::Application::registerXMLView("UpUserSmall", UpUserSmall::create);
     brls::Application::registerXMLView("VideoComment", VideoComment::create);
     brls::Application::registerXMLView("ButtonClose", ButtonClose::create);
-    brls::Application::registerXMLView("CheckBox", CheckBox::create);
-    brls::Application::registerXMLView("SelectorCell", SelectorCell::create);
+    brls::Application::registerXMLView("CheckBox", BiliCheckBox::create);
+    brls::Application::registerXMLView("SelectorCell", BiliSelectorCell::create);
     brls::Application::registerXMLView("AnimationImage", AnimationImage::create);
+    brls::Application::registerXMLView("ShareBox", ShareBox::create);
+    brls::Application::registerXMLView("DynamicVideoCardView", DynamicVideoCardView::create);
+    brls::Application::registerXMLView("DynamicArticleView", DynamicArticleView::create);
 
     //     Register fragments
     brls::Application::registerXMLView("HomeTab", HomeTab::create);
@@ -90,7 +98,9 @@ void Register::initCustomView() {
     brls::Application::registerXMLView("MineCollection", MineCollection::create);
     brls::Application::registerXMLView("MineCollectionVideoList", MineCollectionVideoList::create);
     brls::Application::registerXMLView("MineBangumi", MineBangumi::create);
+    brls::Application::registerXMLView("InboxFeed", InboxFeed::create);
     brls::Application::registerXMLView("SearchTab", SearchTab::create);
+    brls::Application::registerXMLView("SearchOrder", SearchOrder::create);
     brls::Application::registerXMLView("SearchVideo", SearchVideo::create);
     brls::Application::registerXMLView("SearchCinema", SearchCinema::create);
     brls::Application::registerXMLView("SearchBangumi", SearchBangumi::create);
@@ -138,11 +148,15 @@ void Register::initCustomTheme() {
 
     // 分割线颜色
     brls::Theme::getLightTheme().addColor("color/line", nvgRGB(208, 208, 208));
-    brls::Theme::getDarkTheme().addColor("color/line", nvgRGB(208, 208, 208));
+    brls::Theme::getDarkTheme().addColor("color/line", nvgRGB(100, 100, 100));
 
     // 粉色背景，用于扁平TabBar背景色
     brls::Theme::getLightTheme().addColor("color/pink_1", nvgRGB(252, 237, 241));
     brls::Theme::getDarkTheme().addColor("color/pink_1", nvgRGB(44, 27, 34));
+
+    // 红色，用于提示小红点
+    brls::Theme::getLightTheme().addColor("color/tip/red", nvgRGB(250, 88, 87));
+    brls::Theme::getDarkTheme().addColor("color/tip/red", nvgRGB(211, 63, 64));
 
     brls::Theme::getLightTheme().addColor("color/white", nvgRGB(255, 255, 255));
     brls::Theme::getDarkTheme().addColor("color/white", nvgRGBA(255, 255, 255, 180));
@@ -165,12 +179,14 @@ void Register::initCustomStyle() {
         brls::getStyle().addMetric("wiliwili/comment/level/x", 30);
         brls::getStyle().addMetric("wiliwili/margin/20", 10);
         brls::getStyle().addMetric("wiliwili/about/qr", 150);
-        brls::getStyle().addMetric("wiliwili/about/speech/width", 430);
+        brls::getStyle().addMetric("wiliwili/about/speech/width", 420);
         brls::getStyle().addMetric("wiliwili/about/speech/header", 495);
         brls::getStyle().addMetric("wiliwili/tab_frame/content_padding_top_bottom", 20);
         brls::getStyle().addMetric("wiliwili/mine/num", 18);
         brls::getStyle().addMetric("wiliwili/mine/type", 12);
         brls::getStyle().addMetric("wiliwili/setting/about/bottom", 0);
+        brls::getStyle().addMetric("wiliwili/dynamic/video/card/padding", 10);
+        brls::getStyle().addMetric("brls/tab_frame/content_padding_sides", 30);
     } else {
         switch (brls::Application::ORIGINAL_WINDOW_HEIGHT) {
             case 1080:
@@ -203,5 +219,6 @@ void Register::initCustomStyle() {
         brls::getStyle().addMetric("wiliwili/mine/num", 24);
         brls::getStyle().addMetric("wiliwili/mine/type", 16);
         brls::getStyle().addMetric("wiliwili/setting/about/bottom", 50);
+        brls::getStyle().addMetric("wiliwili/dynamic/video/card/padding", 20);
     }
 }

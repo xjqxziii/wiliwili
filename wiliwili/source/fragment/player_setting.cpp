@@ -11,6 +11,7 @@
 #include "utils/config_helper.hpp"
 #include "utils/shader_helper.hpp"
 #include "utils/number_helper.hpp"
+#include "utils/activity_helper.hpp"
 #include "activity/player_activity.hpp"
 #include "fragment/player_setting.hpp"
 #include "view/danmaku_core.hpp"
@@ -109,6 +110,15 @@ void PlayerSetting::setupCustomShaders() {
                 ShaderHelper::instance().clearShader();
             }
 
+#ifdef BOREALIS_USE_D3D11
+            // 如果正在使用硬解，那么将硬解更新为 auto-copy，避免直接硬解因为不经过 cpu 处理导致滤镜无效
+            if (MPVCore::HARDWARE_DEC) {
+                std::string hwdec = value ? "auto-copy" : MPVCore::PLAYER_HWDEC_METHOD;
+                MPVCore::instance().command_async("set", "hwdec", hwdec);
+                brls::Logger::info("MPV hardware decode: {}", hwdec);
+            }
+#endif
+
             GA("player_setting", {{"shader", cell->title->getFullText()}});
             return true;
         });
@@ -151,7 +161,7 @@ void PlayerSetting::setupCommonSetting() {
                                            "wiliwili/setting/app/playback/auto_no"_i18n};
     btnPlayStrategy->setDetailText(showStrategy ? optionList[strategyIndex] : " ");
     btnPlayStrategy->registerClickAction([this, optionList, showStrategy](View* view) {
-        auto d = BaseDropdown::text(
+        BaseDropdown::text(
             "wiliwili/setting/app/playback/play_strategy"_i18n, optionList,
             [this, optionList, showStrategy](int data) {
                 if (showStrategy) btnPlayStrategy->setDetailText(optionList[data]);
@@ -159,23 +169,8 @@ void PlayerSetting::setupCommonSetting() {
                 ProgramConfig::instance().setSettingItem(SettingItem::PLAYER_STRATEGY, data);
                 GA("player_setting", {{"strategy", optionList[data]}});
             },
-            ProgramConfig::instance().getIntOption(SettingItem::PLAYER_STRATEGY));
-
-        // bottom hint
-        auto box = new brls::Box();
-        box->setMargins(20, 10, 10, 30);
-        box->setAlignItems(brls::AlignItems::CENTER);
-        auto icon = new SVGImage();
-        icon->setDimensions(12, 13);
-        icon->setMarginRight(10);
-        icon->setImageFromSVGRes("svg/ico-sprite-info.svg");
-        auto hint = new brls::Label();
-        hint->setFontSize(18);
-        hint->setTextColor(brls::Application::getTheme().getColor("font/grey"));
-        hint->setText("wiliwili/setting/app/playback/auto_hint"_i18n);
-        box->addView(icon);
-        box->addView(hint);
-        d->getContentView()->addView(box);
+            ProgramConfig::instance().getIntOption(SettingItem::PLAYER_STRATEGY),
+            "wiliwili/setting/app/playback/auto_hint"_i18n);
         return true;
     });
 
@@ -197,14 +192,21 @@ void PlayerSetting::setupCommonSetting() {
 
     /// Player mirror
     btnMirror->init("wiliwili/player/setting/common/mirror"_i18n, MPVCore::VIDEO_MIRROR, [](bool value) {
-        MPVCore::VIDEO_MIRROR = !MPVCore::VIDEO_MIRROR;
-        MPVCore::instance().command_async("set", "vf", MPVCore::VIDEO_MIRROR ? "hflip" : "");
+        MPVCore::instance().setMirror(!MPVCore::VIDEO_MIRROR);
         GA("player_setting", {{"mirror", value ? "true" : "false"}});
+
+        // 如果正在使用硬解，那么将硬解更新为 auto-copy，避免直接硬解因为不经过 cpu 处理导致镜像翻转无效
+        if (MPVCore::HARDWARE_DEC) {
+            std::string hwdec = MPVCore::VIDEO_MIRROR ? "auto-copy" : MPVCore::PLAYER_HWDEC_METHOD;
+            MPVCore::instance().command_async("set", "hwdec", hwdec);
+            brls::Logger::info("MPV hardware decode: {}", hwdec);
+        }
     });
 
     /// Player aspect
     btnAspect->init("wiliwili/player/setting/aspect/header"_i18n,
-                    {"wiliwili/player/setting/aspect/auto"_i18n, "4:3", "16:9"},
+                    {"wiliwili/player/setting/aspect/auto"_i18n, "wiliwili/player/setting/aspect/stretch"_i18n,
+                     "wiliwili/player/setting/aspect/crop"_i18n, "4:3", "16:9"},
                     conf.getStringOptionIndex(SettingItem::PLAYER_ASPECT), [this](int value) {
                         auto option        = ProgramConfig::instance().getOptionData(SettingItem::PLAYER_ASPECT);
                         auto& aspect       = option.optionList[value];
@@ -227,7 +229,7 @@ void PlayerSetting::setupCommonSetting() {
 
     /// Auto Sleep
     btnSleep->setText("wiliwili/setting/app/playback/sleep"_i18n);
-    btnSleep->setDetailText(getCountdown(wiliwili::getUnixTime()));
+    updateCountdown(wiliwili::getUnixTime());
     btnSleep->registerClickAction([this](View* view) {
         std::vector<int> timeList           = {15, 30, 60, 90, 120};
         std::string min                     = "wiliwili/home/common/min"_i18n;
@@ -248,14 +250,14 @@ void PlayerSetting::setupCommonSetting() {
                     MPVCore::CLOSE_TIME = wiliwili::getUnixTime() + timeList[data] * 60;
                     GA("player_setting", {{"sleep", timeList[data]}});
                 }
-                btnSleep->setDetailText(getCountdown(wiliwili::getUnixTime()));
+                updateCountdown(wiliwili::getUnixTime());
             },
             -1);
         return true;
     });
 
 /// Fullscreen
-#if defined(__linux__) || defined(_WIN32)
+#ifdef ALLOW_FULLSCREEN
     btnFullscreen->init("wiliwili/setting/app/others/fullscreen"_i18n, conf.getBoolOption(SettingItem::FULLSCREEN),
                         [](bool value) {
                             ProgramConfig::instance().setSettingItem(SettingItem::FULLSCREEN, value);
@@ -265,8 +267,38 @@ void PlayerSetting::setupCommonSetting() {
                             brls::Application::getPlatform()->getVideoContext()->fullScreen(value);
                             GA("player_setting", {{"fullscreen", value ? "true" : "false"}});
                         });
+
+    auto setOnTopCell = [this](bool enabled) {
+        if (enabled) {
+            btnOnTopMode->setDetailTextColor(brls::Application::getTheme()["brls/list/listItem_value_color"]);
+        } else {
+            btnOnTopMode->setDetailTextColor(brls::Application::getTheme()["brls/text_disabled"]);
+        }
+    };
+    setOnTopCell(conf.getIntOptionIndex(SettingItem::ON_TOP_MODE) != 0);
+    int onTopModeIndex = conf.getIntOption(SettingItem::ON_TOP_MODE);
+    btnOnTopMode->setText("wiliwili/setting/app/others/always_on_top"_i18n);
+    std::vector<std::string> onTopOptionList = {"hints/off"_i18n, "hints/on"_i18n,
+                                                "wiliwili/player/setting/aspect/auto"_i18n};
+    btnOnTopMode->setDetailText(onTopOptionList[onTopModeIndex]);
+    btnOnTopMode->registerClickAction([this, onTopOptionList, setOnTopCell](brls::View* view) {
+        BaseDropdown::text(
+            "wiliwili/setting/app/others/always_on_top"_i18n, onTopOptionList,
+            [this, onTopOptionList, setOnTopCell](int data) {
+                btnOnTopMode->setDetailText(onTopOptionList[data]);
+                ProgramConfig::instance().setSettingItem(SettingItem::ON_TOP_MODE, data);
+                ProgramConfig::instance().checkOnTop();
+                setOnTopCell(data != 0);
+                GA("player_setting", {{"on_top_mode", data}});
+            },
+            ProgramConfig::instance().getIntOption(SettingItem::ON_TOP_MODE),
+            "wiliwili/setting/app/others/always_on_top_hint"_i18n);
+        return true;
+    });
+
 #else
     btnFullscreen->setVisibility(brls::Visibility::GONE);
+    btnOnTopMode->setVisibility(brls::Visibility::GONE);
 #endif
 
     btnEqualizerReset->registerClickAction([this](View* view) {
@@ -391,16 +423,18 @@ void PlayerSetting::draw(NVGcontext* vg, float x, float y, float width, float he
     size_t now               = wiliwili::getUnixTime();
     if (now != updateTime) {
         updateTime = now;
-        btnSleep->detail->setText(getCountdown(now));
+        updateCountdown(now);
     }
     Box::draw(vg, x, y, width, height, style, ctx);
 }
 
-std::string PlayerSetting::getCountdown(size_t now) {
+void PlayerSetting::updateCountdown(size_t now) {
     if (MPVCore::CLOSE_TIME == 0 || now > MPVCore::CLOSE_TIME) {
-        return "hints/off"_i18n;
+        btnSleep->setDetailTextColor(brls::Application::getTheme()["brls/text_disabled"]);
+        btnSleep->setDetailText("hints/off"_i18n);
     } else {
-        return wiliwili::sec2Time(MPVCore::CLOSE_TIME - now);
+        btnSleep->setDetailTextColor(brls::Application::getTheme()["brls/list/listItem_value_color"]);
+        btnSleep->setDetailText(wiliwili::sec2Time(MPVCore::CLOSE_TIME - now));
     }
 }
 
@@ -422,7 +456,7 @@ void PlayerSetting::hideHighlightLineCells() { btnHighlight->setVisibility(brls:
 
 void PlayerSetting::hideSkipOpeningCreditsSetting() { btnSkip->setVisibility(brls::Visibility::GONE); }
 
-void PlayerSetting::setBangumiCustomSetting(const std::string& title, unsigned int id) {
+void PlayerSetting::setBangumiCustomSetting(const std::string& title, uint64_t id) {
     if (id == 0) return;
     seasonId = id;
 
@@ -435,7 +469,8 @@ void PlayerSetting::setBangumiCustomSetting(const std::string& title, unsigned i
     /// 番剧自定义数据
     auto seasonSetting = ProgramConfig::instance().getSeasonCustom(seasonId);
 
-    std::unordered_map<std::string, int> aspectMap = {{"", 0}, {"-1", 1}, {"4:3", 2}, {"16:9", 3}};
+    std::unordered_map<std::string, int> aspectMap = {{"", 0},   {"-1", 1},  {"-2", 2},
+                                                      {"-3", 3}, {"4:3", 4}, {"16:9", 5}};
     int aspect                                     = 0;
     if (aspectMap.find(seasonSetting.player_aspect) != aspectMap.end()) {
         aspect = aspectMap[seasonSetting.player_aspect];
@@ -443,25 +478,27 @@ void PlayerSetting::setBangumiCustomSetting(const std::string& title, unsigned i
     if (aspect == 0) {
         btnCustomAspect->setDetailTextColor(brls::Application::getTheme()["brls/text_disabled"]);
     }
-    btnCustomAspect->init("wiliwili/player/setting/season/aspect"_i18n,
-                          {"hints/off"_i18n, "wiliwili/player/setting/aspect/auto"_i18n, "4:3", "16:9"}, aspect,
-                          [this, seasonSetting](int value) {
-                              std::vector<std::string> aspectOption = {"", "-1", "4:3", "16:9"};
-                              auto setting          = ProgramConfig::instance().getSeasonCustom(seasonId);
-                              setting.player_aspect = aspectOption[value];
-                              ProgramConfig::instance().addSeasonCustomSetting(seasonId, setting);
-                              auto theme = brls::Application::getTheme();
-                              if (setting.player_aspect.empty()) {
-                                  // 如果设置为空，则使用全局设置
-                                  setting.player_aspect = ProgramConfig::instance().getSettingItem(
-                                      SettingItem::PLAYER_ASPECT, std::string{"-1"});
-                                  btnCustomAspect->setDetailTextColor(theme["brls/text_disabled"]);
-                              } else {
-                                  btnCustomAspect->setDetailTextColor(theme["brls/list/listItem_value_color"]);
-                              }
-                              MPVCore::instance().setAspect(setting.player_aspect);
-                              GA("season_custom_setting", {{"aspect", setting.player_aspect}});
-                          });
+    btnCustomAspect->init(
+        "wiliwili/player/setting/season/aspect"_i18n,
+        {"hints/off"_i18n, "wiliwili/player/setting/aspect/auto"_i18n, "wiliwili/player/setting/aspect/stretch"_i18n,
+         "wiliwili/player/setting/aspect/crop"_i18n, "4:3", "16:9"},
+        aspect, [this, seasonSetting](int value) {
+            std::vector<std::string> aspectOption = {"", "-1", "-2", "-3", "4:3", "16:9"};
+            auto setting                          = ProgramConfig::instance().getSeasonCustom(seasonId);
+            setting.player_aspect                 = aspectOption[value];
+            ProgramConfig::instance().addSeasonCustomSetting(seasonId, setting);
+            auto theme = brls::Application::getTheme();
+            if (setting.player_aspect.empty()) {
+                // 如果设置为空，则使用全局设置
+                setting.player_aspect =
+                    ProgramConfig::instance().getSettingItem(SettingItem::PLAYER_ASPECT, std::string{"-1"});
+                btnCustomAspect->setDetailTextColor(theme["brls/text_disabled"]);
+            } else {
+                btnCustomAspect->setDetailTextColor(theme["brls/list/listItem_value_color"]);
+            }
+            MPVCore::instance().setAspect(setting.player_aspect);
+            GA("season_custom_setting", {{"aspect", setting.player_aspect}});
+        });
     if (seasonSetting.custom_clip) {
         btnClipStart->setVisibility(brls::Visibility::VISIBLE);
         btnClipEnd->setVisibility(brls::Visibility::VISIBLE);

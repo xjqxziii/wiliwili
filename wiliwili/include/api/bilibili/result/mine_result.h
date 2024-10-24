@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include "nlohmann/json.hpp"
+#include "bilibili/util/json.hpp"
 #include "bilibili/result/dynamic_video.h"
+#include "bilibili/result/inbox_result.h"
 
 namespace bilibili {
 
@@ -86,17 +87,21 @@ public:
     std::string title;
     unsigned int video_review;
     std::string author;
-    unsigned int mid;
+    uint64_t mid;
     unsigned int created;
     std::string length;
-    unsigned int aid;
+    uint64_t aid;
     std::string bvid;
+    bool is_charging_arc; // 充电专属视频
 };
 inline void from_json(const nlohmann::json& nlohmann_json_j, UserUploadedVideoResult& nlohmann_json_t) {
     if (nlohmann_json_j.at("play").is_number()) {
         nlohmann_json_j.at("play").get_to(nlohmann_json_t.play);
     } else {
         nlohmann_json_t.play = -1;
+    }
+    if (nlohmann_json_j.contains("is_charging_arc")) {
+        nlohmann_json_j.at("is_charging_arc").get_to(nlohmann_json_t.is_charging_arc);
     }
     NLOHMANN_JSON_EXPAND(NLOHMANN_JSON_PASTE(NLOHMANN_JSON_FROM, comment, pic, description, copyright, title,
                                              video_review, author, mid, created, length, aid, bvid));
@@ -132,20 +137,13 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(UserDynamicVideoResultWrapper, page, archives
 
 class UserDynamicCount {
 public:
-    std::map<std::string, unsigned int> data;
+    size_t dyn_num;
 };
-inline void from_json(const nlohmann::json& nlohmann_json_j, UserDynamicCount& nlohmann_json_t) {
-    if (!nlohmann_json_j.contains("items") || !nlohmann_json_j.at("items").is_array()) return;
-
-    for (auto i : nlohmann_json_j.at("items")) {
-        if (i.contains("uid") && i.contains("num"))
-            nlohmann_json_t.data[std::to_string(i.at("uid").get<unsigned int>())] = i.at("num").get<unsigned int>();
-    }
-}
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(UserDynamicCount, dyn_num);
 
 class UserRelationStat {
 public:
-    unsigned int mid, following, black, follower;
+    uint64_t mid, following, black, follower;
 };
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(UserRelationStat, mid, following, black, follower);
 

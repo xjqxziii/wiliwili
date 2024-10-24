@@ -17,6 +17,8 @@
 #if defined(MPV_SW_RENDER)
 #elif defined(BOREALIS_USE_DEKO3D)
 #include <mpv/render_dk3d.h>
+#elif defined(BOREALIS_USE_D3D11)
+#include <mpv/render_dxgi.h>
 #elif defined(BOREALIS_USE_OPENGL)
 #include <mpv/render_gl.h>
 #if defined(__PSV__) || defined(PS4)
@@ -38,7 +40,7 @@
 // 将视频绘制到独立的 framebuffer
 #define MPV_USE_FB
 #if !defined(USE_GLES2) && !defined(USE_GLES3)
-// 虽然 gles3 理论时也支持 vao 但是部分平台上实际不支持（比如 ANGLE）
+// 虽然 gles3 理论上也支持 vao 但是部分平台上实际不支持（比如 ANGLE）
 #define MPV_USE_VAO
 #endif
 struct GLShader {
@@ -78,6 +80,7 @@ typedef int (*mpvRenderContextRenderFunc)(mpv_render_context *ctx, mpv_render_pa
 typedef void (*mpvRenderContextReportSwapFunc)(mpv_render_context *ctx);
 typedef uint64_t (*mpvRenderContextUpdateFunc)(mpv_render_context *ctx);
 typedef void (*mpvRenderContextFreeFunc)(mpv_render_context *ctx);
+typedef unsigned long (*mpvClientApiVersionFunc)();
 
 extern mpvSetOptionStringFunc mpvSetOptionString;
 extern mpvObservePropertyFunc mpvObserveProperty;
@@ -100,6 +103,7 @@ extern mpvRenderContextRenderFunc mpvRenderContextRender;
 extern mpvRenderContextReportSwapFunc mpvRenderContextReportSwap;
 extern mpvRenderContextUpdateFunc mpvRenderContextUpdate;
 extern mpvRenderContextFreeFunc mpvRenderContextFree;
+extern mpvClientApiVersionFunc mpvClientApiVersion;
 #else
 #define mpvSetOptionString mpv_set_option_string
 #define mpvObserveProperty mpv_observe_property
@@ -122,6 +126,7 @@ extern mpvRenderContextFreeFunc mpvRenderContextFree;
 #define mpvRenderContextReportSwap mpv_render_context_report_swap
 #define mpvRenderContextUpdate mpv_render_context_update
 #define mpvRenderContextFree mpv_render_context_free
+#define mpvClientApiVersion mpv_client_api_version
 #endif
 
 class MPVCore : public brls::Singleton<MPVCore> {
@@ -219,6 +224,8 @@ public:
      */
     void setAspect(const std::string &value);
 
+    void setMirror(bool value);
+
     /**
      * 设置视频亮度
      * @param value [-100, 100]
@@ -283,7 +290,15 @@ public:
 
     void reset();
 
-    void setShader(const std::string &profile, const std::string &shaders, bool showHint = true);
+    /**
+     * 设置着色器配置
+     * @param profile 配置名
+     * @param shaders 着色器文件
+     * @param settings mpv 配置
+     * @param reset 在设置前是否需要重置
+     */
+    void setShader(const std::string &profile, const std::string &shaders,
+                   const std::vector<std::vector<std::string>> &settings, bool reset = true);
 
     void clearShader(bool showHint = true);
 
@@ -295,16 +310,10 @@ public:
             return;
         }
         std::vector<std::string> commands = {fmt::format("{}", std::forward<Args>(args))...};
-
-        std::vector<const char *> res;
-        res.reserve(commands.size() + 1);
-        for (auto &i : commands) {
-            res.emplace_back(i.c_str());
-        }
-        res.emplace_back(nullptr);
-
-        mpvCommandAsync(mpv, 0, res.data());
+        _command_async(commands);
     }
+
+    void _command_async(const std::vector<std::string>& commands);
 
     // core states
     int64_t duration       = 0;  // second
@@ -325,6 +334,7 @@ public:
     std::string filepath;
     std::string currentShaderProfile;  // 当前着色器脚本名
     std::string currentShader;         // 当前着色器脚本
+    std::vector<std::vector<std::string>> currentSetting; // 当前着色器脚本附加的mpv配置
 
     double video_brightness = 0;
     double video_contrast   = 0;
@@ -342,8 +352,18 @@ public:
     inline static bool TERMINAL = false;
 
     // 硬件解码
-    inline static bool HARDWARE_DEC               = false;
+    inline static bool HARDWARE_DEC = false;
+
+    // 硬解方式
+#ifdef __SWITCH__
+    inline static std::string PLAYER_HWDEC_METHOD = "auto";
+#elif defined(__PSV__)
+    inline static std::string PLAYER_HWDEC_METHOD = "vita-copy";
+#elif defined(PS4)
+    inline static std::string PLAYER_HWDEC_METHOD = "no";
+#else
     inline static std::string PLAYER_HWDEC_METHOD = "auto-safe";
+#endif
 
     // 此变量为真时，加载结束后自动播放视频
     inline static bool AUTO_PLAY = true;
@@ -394,6 +414,10 @@ private:
     };
     mpv_render_param mpv_params[3] = {
         {MPV_RENDER_PARAM_DEKO3D_FBO, &mpv_fbo},
+        {MPV_RENDER_PARAM_INVALID, nullptr},
+    };
+#elif defined(BOREALIS_USE_D3D11)
+    mpv_render_param mpv_params[1] = {
         {MPV_RENDER_PARAM_INVALID, nullptr},
     };
 #elif defined(MPV_NO_FB)

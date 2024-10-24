@@ -12,8 +12,6 @@ namespace wiliwili {
 
 std::string urlEncode(const std::string &in);
 
-// https://gist.github.com/tomykaira/f0fd86b6c73063283afe550bc5d77594
-
 std::string base64Encode(const std::string &in);
 
 int base64Decode(const std::string &in, std::string &out);
@@ -24,5 +22,7 @@ template <typename... Args>
 inline std::string format(fmt::string_view fmt, Args &&...args) {
     return fmt::format(fmt::runtime(fmt), std::forward<Args>(args)...);
 }
+
+std::string toUpper( const std::string & str, std::string::size_type length );
 
 };  // namespace wiliwili

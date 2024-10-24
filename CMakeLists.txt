@@ -14,13 +14,14 @@ cmake_dependent_option(BUILTIN_NSP "Built in NSP forwarder" OFF "PLATFORM_SWITCH
 # macOS
 # These four options are only for macOS app bundling usage.
 # Do not use it until you know what you are doing.
-cmake_dependent_option(MAC_IntelChip "Build for x86_64 (10.11)" OFF "APPLE;NOT PLATFORM_IOS" OFF)
+cmake_dependent_option(MAC_IntelChip_Old "Build for x86_64 (10.11)" OFF "APPLE;NOT PLATFORM_IOS" OFF)
+cmake_dependent_option(MAC_IntelChip "Build for x86_64 (10.15)" OFF "APPLE;NOT PLATFORM_IOS" OFF)
 cmake_dependent_option(MAC_AppleSilicon "Build for arm64 (11.0)" OFF "APPLE;NOT PLATFORM_IOS" OFF)
 cmake_dependent_option(MAC_Universal "Support x86_64;arm64 at the same time" OFF "APPLE;NOT PLATFORM_IOS" OFF)
 cmake_dependent_option(MAC_DOWNLOAD_DYLIB "Using precompiled dylib instead of system provided" OFF "APPLE;NOT PLATFORM_IOS" OFF)
 
 # Linux
-# Using CMAKE_INSTALL_PREFIX specifies the location where the application is installed.
+# Using CMAKE_INSTALL_PREFIX to specify the location where the application is installed.
 cmake_dependent_option(INSTALL "Install to system path" OFF "UNIX;NOT APPLE" OFF)
 
 # For Developer
@@ -31,16 +32,16 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/GoogleAnalytics.cmake)
 
 # Dependencies
 option(USE_SHARED_LIB "Whether to use shared libs provided by system" OFF)
-cmake_dependent_option(USE_SYSTEM_CURL "" OFF "NOT USE_SHARED_LIB" ON)
-cmake_dependent_option(USE_SYSTEM_CPR "" OFF "NOT USE_SHARED_LIB" ON)
-cmake_dependent_option(USE_SYSTEM_QRCODEGEN "" OFF "NOT USE_SHARED_LIB" ON)
-cmake_dependent_option(USE_SYSTEM_PYSTRING "" OFF "NOT USE_SHARED_LIB" ON)
-cmake_dependent_option(USE_SYSTEM_OPENCC "" OFF "NOT USE_SHARED_LIB" ON)
-cmake_dependent_option(USE_SYSTEM_FMT "" OFF "NOT USE_SHARED_LIB" ON)
-cmake_dependent_option(USE_SYSTEM_TINYXML2 "" OFF "NOT USE_SHARED_LIB" ON)
-cmake_dependent_option(USE_SYSTEM_SDL2 "" OFF "NOT USE_SHARED_LIB" ON)
-cmake_dependent_option(USE_SYSTEM_GLFW "" OFF "NOT USE_SHARED_LIB" ON)
-cmake_dependent_option(USE_SYSTEM_MONGOOSE "" OFF "NOT USE_SHARED_LIB" ON)
+option(USE_SYSTEM_CURL "" ${USE_SHARED_LIB})
+option(USE_SYSTEM_CPR "" ${USE_SHARED_LIB})
+option(USE_SYSTEM_QRCODEGEN "" ${USE_SHARED_LIB})
+option(USE_SYSTEM_PYSTRING "" ${USE_SHARED_LIB})
+option(USE_SYSTEM_OPENCC "" ${USE_SHARED_LIB})
+option(USE_SYSTEM_FMT "" ${USE_SHARED_LIB})
+option(USE_SYSTEM_TINYXML2 "" ${USE_SHARED_LIB})
+option(USE_SYSTEM_SDL2 "" ${USE_SHARED_LIB})
+option(USE_SYSTEM_MONGOOSE "" ${USE_SHARED_LIB})
+option(USE_SYSTEM_GLFW "Not recommended because we used a modified GLFW" OFF)
 
 option(DISABLE_OPENCC "Disable Chinese Simplified and Chinese Traditional Conversion" OFF)
 option(DISABLE_WEBP "Disable webp" OFF)
@@ -81,14 +82,16 @@ add_definitions(-DFONS_HASH_LUT_SIZE=4096)
 # Project Info
 project(wiliwili)
 set(VERSION_MAJOR "1")
-set(VERSION_MINOR "3")
+set(VERSION_MINOR "5")
 set(VERSION_REVISION "0")
-set(VERSION_BUILD "0")
+if (NOT VERSION_BUILD)
+    set(VERSION_BUILD "0")
+endif ()
 set(PROJECT_AUTHOR "xfangfang")
 set(PACKAGE_NAME cn.xfangfang.wiliwili)
 set(VITA_TITLEID "WILIWILI0")
 set(PSN_TITLE_ID "WILI00000")
-set(VITA_VERSION "01.30")
+set(VITA_VERSION "01.50")
 set(PROJECT_ICON ${CMAKE_CURRENT_SOURCE_DIR}/resources/icon/icon.jpg)
 set(PROJECT_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/resources)
 set(APP_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_REVISION}")
@@ -98,7 +101,11 @@ find_package(Threads REQUIRED)
 list(APPEND APP_PLATFORM_LIB ${CMAKE_THREAD_LIBS_INIT})
 
 # Find libmpv and libwebp
-if (PLATFORM_DESKTOP)
+if (MAC_DOWNLOAD_DYLIB)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/macos.cmake)
+    list(APPEND CMAKE_MODULE_PATH
+            ${CMAKE_BINARY_DIR}/deps/lib/cmake)
+elseif (PLATFORM_DESKTOP)
     find_package(MPV REQUIRED)
     message(STATUS "Found libmpv: ${MPV_VERSION} ${MPV_INCLUDE_DIR} ${MPV_LIBRARY}")
     list(APPEND APP_PLATFORM_INCLUDE ${MPV_INCLUDE_DIR})
@@ -193,7 +200,15 @@ add_subdirectory(library)
 
 # Main Target
 program_target(${PROJECT_NAME} "${MAIN_SRC}")
-set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
+set_target_properties(${PROJECT_NAME} PROPERTIES
+        CXX_STANDARD 17
+        UNITY_BUILD ${BRLS_UNITY_BUILD}
+)
+set_source_files_properties(
+        wiliwili/source/utils/config_helper.cpp
+        wiliwili/source/activity/setting_activity.cpp
+        wiliwili/source/activity/dlna_activity.cpp
+        PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 # building release file
 if (PLATFORM_DESKTOP)
@@ -208,10 +223,8 @@ if (PLATFORM_DESKTOP)
 
     if (APPLE)
         if (MAC_DOWNLOAD_DYLIB)
-            # Download macos dylib dependencies if require
-            include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/macos.cmake)
             set(bundle_args1 "-nb")
-            set(bundle_args2 "${MACOS_DYLIB_DIR}")
+            set(bundle_args2 "${CMAKE_BINARY_DIR}/deps/lib")
         else ()
             # Use system provided dylib
             set(bundle_args1 "-b")
@@ -219,7 +232,7 @@ if (PLATFORM_DESKTOP)
         endif ()
         add_custom_target(
             ${PROJECT_NAME}.app
-            COMMAND "bash" "${CMAKE_BINARY_DIR}/../scripts/build_mac.sh" "${bundle_args1}" "${bundle_args2}" "${APP_VERSION}"
+            COMMAND "bash" "${CMAKE_SOURCE_DIR}/scripts/build_mac.sh" "${bundle_args1}" "${bundle_args2}" "${APP_VERSION}"
         )
         add_dependencies(${PROJECT_NAME}.app ${PROJECT_NAME})
     elseif (UNIX AND INSTALL)

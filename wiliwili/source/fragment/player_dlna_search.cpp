@@ -49,6 +49,7 @@ bool RepeatDuratoinTimer::onUpdate(brls::Time delta) {
 
 void PlayerDlnaSearch::searchStop() {
     running.store(false);
+    UpnpDlna::instance().stopSearch();
     if (dlnaSearchThread.joinable()) dlnaSearchThread.join();
     brls::Logger::debug("PlayerDlnaSearch::searchStop()");
 }
@@ -98,13 +99,11 @@ PlayerDlnaSearch::PlayerDlnaSearch() {
     });
 
     closebtn->registerClickAction([](...) {
-        if (PlayerDlnaSearch::isRunning()) return true;
         brls::Application::popActivity();
         return true;
     });
 
     cancel->registerClickAction([](...) {
-        if (PlayerDlnaSearch::isRunning()) return true;
         brls::Application::popActivity();
         return true;
     });
@@ -118,7 +117,6 @@ PlayerDlnaSearch::PlayerDlnaSearch() {
     btnRefresh->addGestureRecognizer(new brls::TapGestureRecognizer(this));
 
     this->registerAction("hints/back"_i18n, brls::BUTTON_B, [](View* view) {
-        if (PlayerDlnaSearch::isRunning()) return true;
         brls::Application::popActivity();
         return true;
     });
@@ -166,7 +164,7 @@ PlayerDlnaSearch::PlayerDlnaSearch() {
         } else if (event == "CAST_URL_ERROR") {
             waitingUrl.store(false);
             brls::Application::popActivity(brls::TransitionAnimation::NONE);
-            DialogHelper::showDialog("wiliwili/player/cast/err_url"_i18n);
+            DialogHelper::showDialog(data == nullptr ? "wiliwili/player/cast/err_url"_i18n : std::string{(char*)data});
             if (currentCell) currentCell->title->setText(currentRenderer.friendlyName);
         }
     });

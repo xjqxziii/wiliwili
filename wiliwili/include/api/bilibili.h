@@ -4,7 +4,6 @@
 #include <map>
 #include <vector>
 #include <future>
-#include "bilibili/api.h"
 
 namespace bilibili {
 
@@ -17,9 +16,28 @@ class LivePayLink;                // 大航海专属直播付费链接
 class LiveFullAreaResultWrapper;  // 直播分区列表
 class LiveSecondResultWrapper;    // 直播二级分区推荐
 class SearchResult;
-class DynamicVideoListResultWrapper;  // 动态 全部关注的视频列表
+template <typename Item>
+class DynamicListResultWrapper;                                                          // 动态页列表基类
+class DynamicVideoResult;                                                                // 一条视频动态
+class DynamicArticleResult;                                                              // 一条图文动态
+class DynamicArticleResultWrapper;
+typedef std::vector<DynamicVideoResult> DynamicVideoListResult;                          // 视频动态列表
+typedef std::vector<DynamicArticleResult> DynamicArticleListResult;                      // 图文动态列表
+typedef DynamicListResultWrapper<DynamicVideoListResult> DynamicVideoListResultWrapper;  // 动态 全部关注的视频列表
+typedef DynamicListResultWrapper<DynamicArticleListResult>
+    DynamicArticleListResultWrapper;  // 动态 全部或指定UP主图文列表
 class DynamicUpListResultWrapper;     // 动态 最近更新的UP主列表
 class UserDynamicVideoResultWrapper;  // 动态 单个up主视频列表
+class MsgFeedCursor;                  // 消息页 回复列表游标
+class FeedReplyResultWrapper;         // 消息页 回复列表
+class FeedAtResultWrapper;            // 消息页 at 列表
+class FeedLikeResultWrapper;          // 消息页 赞列表
+class UserCardResult;
+typedef std::vector<UserCardResult> UserCardListResult;
+class InboxChatResultWrapper;
+class InboxMessageResultWrapper;
+class InboxSendResult;
+class DynamicVideoResult;
 class PGCIndexResultWrapper;
 class PGCIndexFilterWrapper;
 class PGCResultWrapper;
@@ -116,6 +134,45 @@ public:
                                        const std::function<void(UserDynamicCount)>& callback = nullptr,
                                        const ErrorCallback& error                            = nullptr);
 
+    /// 批量获取用户昵称头像
+    static void get_user_cards(const std::vector<std::string>& uids,
+                               const std::function<void(UserCardListResult)>& callback = nullptr,
+                               const ErrorCallback& error                              = nullptr);
+
+    /// 私信消息记录
+    static void new_inbox_sessions(time_t begin_ts                                             = 0,
+                                   const std::function<void(InboxChatResultWrapper)>& callback = nullptr,
+                                   const ErrorCallback& error                                  = nullptr);
+
+    /// 私信消息记录
+    static void fetch_inbox_msgs(const std::string& talker_id, size_t size = 20, int session_type = 1,
+                                 const std::string& begin_seqno                                 = "",
+                                 const std::function<void(InboxMessageResultWrapper)>& callback = nullptr,
+                                 const ErrorCallback& error                                     = nullptr);
+
+    static void update_inbox_ack(const std::string& talker_id, int session_type = 1, const std::string& ack_seqno = "",
+                                 const std::string& csrf = "", const ErrorCallback& error = nullptr);
+
+    static void send_inbox_msg(const std::string& sender_id, const std::string& receiver_id, const std::string& message,
+                               const std::string& csrf                              = "",
+                               const std::function<void(InboxSendResult)>& callback = nullptr,
+                               const ErrorCallback& error                           = nullptr);
+
+    /// 消息页 回复列表
+    static void msg_feed_reply(const MsgFeedCursor& cursor,
+                               const std::function<void(FeedReplyResultWrapper)>& callback = nullptr,
+                               const ErrorCallback& error                                  = nullptr);
+
+    /// 消息页 at 列表
+    static void msg_feed_at(const MsgFeedCursor& cursor,
+                            const std::function<void(FeedAtResultWrapper)>& callback = nullptr,
+                            const ErrorCallback& error                               = nullptr);
+
+    /// 消息页 收到的赞列表
+    static void msg_feed_like(const MsgFeedCursor& cursor,
+                              const std::function<void(FeedLikeResultWrapper)>& callback = nullptr,
+                              const ErrorCallback& error                                 = nullptr);
+
     /// get person history videos
     static void get_my_history(const HistoryVideoListCursor& cursor,
                                const std::function<void(HistoryVideoResultWrapper)>& callback = nullptr,
@@ -134,7 +191,7 @@ public:
      * @param callback
      * @param error
      */
-    static void get_my_collection_list(int64_t mid, int index = 1, int num = 20, int type = 1,
+    static void get_my_collection_list(uint64_t mid, int index = 1, int num = 20, int type = 1,
                                        const std::function<void(CollectionListResultWrapper)>& callback = nullptr,
                                        const ErrorCallback& error                                       = nullptr);
 
@@ -153,7 +210,7 @@ public:
      * @param error
      */
     static void get_collection_video_list(
-        int64_t id, int index = 1, int num = 20, int type = 1,
+        uint64_t id, int index = 1, int num = 20, int type = 1,
         const std::function<void(CollectionVideoListResultWrapper)>& callback = nullptr,
         const ErrorCallback& error                                            = nullptr);
 
@@ -169,31 +226,31 @@ public:
                                const ErrorCallback& error                                    = nullptr);
 
     /// get user's upload videos
-    static void get_user_videos(int64_t mid, int pn, int ps,
+    static void get_user_videos(uint64_t mid, int pn, int ps,
                                 const std::function<void(UserUploadedVideoResultWrapper)>& callback = nullptr,
                                 const ErrorCallback& error                                          = nullptr);
 
     /// get user's dynamic videos
-    static void get_user_videos2(int64_t mid, int pn, int ps,
+    static void get_user_videos2(uint64_t mid, int pn, int ps,
                                  const std::function<void(UserDynamicVideoResultWrapper)>& callback = nullptr,
                                  const ErrorCallback& error                                         = nullptr);
 
     /// get season detail by seasonID
-    static void get_season_detail(int seasonID, int epID = 0,
+    static void get_season_detail(uint64_t seasonID, uint64_t epID = 0,
                                   const std::function<void(SeasonResultWrapper)>& callback = nullptr,
                                   const ErrorCallback& error                               = nullptr);
 
     /// 获取番剧相关推荐
-    static void get_season_recommend(size_t seasonID,
+    static void get_season_recommend(uint64_t seasonID,
                                      const std::function<void(SeasonRecommendWrapper)>& callback = nullptr,
                                      const ErrorCallback& error                                  = nullptr);
 
     /// 获取番剧的播放进度
-    static void get_season_status(size_t seasonID, const std::function<void(SeasonStatusResult)>& callback,
+    static void get_season_status(uint64_t seasonID, const std::function<void(SeasonStatusResult)>& callback,
                                   const ErrorCallback& error);
 
     /// get video detail by aid
-    static void get_video_detail(int aid, const std::function<void(VideoDetailResult)>& callback = nullptr,
+    static void get_video_detail(uint64_t aid, const std::function<void(VideoDetailResult)>& callback = nullptr,
                                  const ErrorCallback& error = nullptr);
 
     /// get video detail by bvid
@@ -206,20 +263,20 @@ public:
                                      const ErrorCallback& error                                = nullptr);
 
     /// 获取分P详情 （主要内容为cc字幕）
-    static void get_page_detail(int aid, int cid, const std::function<void(VideoPageResult)>& callback = nullptr,
+    static void get_page_detail(uint64_t aid, uint64_t cid, const std::function<void(VideoPageResult)>& callback = nullptr,
                                 const ErrorCallback& error = nullptr);
 
-    static void get_page_detail(const std::string& bvid, int cid,
+    static void get_page_detail(const std::string& bvid, uint64_t cid,
                                 const std::function<void(VideoPageResult)>& callback = nullptr,
                                 const ErrorCallback& error                           = nullptr);
 
     /// 获取视频防遮挡数据
-    static void get_webmask(const std::string& url, uint64_t rangeStart, uint64_t rangeEnd,
+    static void get_webmask(const std::string& url, int64_t rangeStart, int64_t rangeEnd,
                             const std::function<void(std::string)>& callback = nullptr,
                             const ErrorCallback& error                       = nullptr);
 
     /// get video pagelist by aid
-    static void get_video_pagelist(int aid, const std::function<void(VideoDetailPageListResult)>& callback = nullptr,
+    static void get_video_pagelist(uint64_t aid, const std::function<void(VideoDetailPageListResult)>& callback = nullptr,
                                    const ErrorCallback& error = nullptr);
 
     /// get video pagelist by bvid
@@ -228,7 +285,7 @@ public:
                                    const ErrorCallback& error                                     = nullptr);
 
     /// get video url by aid & cid
-    static void get_video_url(int aid, int cid, int qn = 64,
+    static void get_video_url(uint64_t aid, uint64_t cid, int qn = 64,
                               const std::function<void(VideoUrlResult)>& callback = nullptr,
                               const ErrorCallback& error                          = nullptr);
 
@@ -237,17 +294,17 @@ public:
      * @param oid aid 或 epic
      * @param type 如果传入的普通视频的 aid 则为 1；如果是番剧类的 epid 则为 2
      */
-    static void get_video_url_cast(int oid, int cid, int type, int qn = 64, const std::string& csrf = "",
+    static void get_video_url_cast(uint64_t oid, uint64_t cid, int type, int qn = 64, const std::string& csrf = "",
                                    const std::function<void(VideoUrlResult)>& callback = nullptr,
                                    const ErrorCallback& error                          = nullptr);
 
     /// get video url by bvid & cid
-    static void get_video_url(const std::string& bvid, int cid, int qn = 64,
+    static void get_video_url(const std::string& bvid, uint64_t cid, int qn = 64,
                               const std::function<void(VideoUrlResult)>& callback = nullptr,
                               const ErrorCallback& error                          = nullptr);
 
     /// get season video url by cid
-    static void get_season_url(int cid, int qn = 64, const std::function<void(VideoUrlResult)>& callback = nullptr,
+    static void get_season_url(uint64_t cid, int qn = 64, const std::function<void(VideoUrlResult)>& callback = nullptr,
                                const ErrorCallback& error = nullptr);
 
     /// get live video url by roomid
@@ -354,19 +411,31 @@ public:
     static void get_pgc_all_filter(const std::function<void(PGCIndexFilters)>& callback = nullptr,
                                    const ErrorCallback& error                           = nullptr);
 
-    /// 视频页 获取评论
-    /// 3: 热门评论、2：最新评论 1：评论
-    static void get_comment(int aid, int next, int mode = 3,
+    /// 获取评论
+    /// @mode: 3: 热门评论、2：最新评论 1：评论
+    /// @type: 1: 视频 11: 图片动态 17: 文字动态 ...
+    static void get_comment(const std::string& oid, int next, int mode = 3, int type = 1,
                             const std::function<void(VideoCommentResultWrapper)>& callback = nullptr,
                             const ErrorCallback& error                                     = nullptr);
 
-    /// 获取单条视频的相关回复
-    static void get_comment_detail(const std::string& access_key, size_t oid, int64_t rpid, size_t next = 0,
+    /// 获取单条评论详情
+    static void get_comment_detail(const std::string& access_key, const std::string& oid, uint64_t rpid, size_t next = 0,
+                                   int type                                                      = 1,
                                    const std::function<void(VideoSingleCommentDetail)>& callback = nullptr,
                                    const ErrorCallback& error                                    = nullptr);
 
     /// 点赞评论
-    static void be_agree_comment(const std::string& access_key, size_t oid, int64_t rpid, bool is_like,
+    static void be_agree_comment(const std::string& access_key, const std::string& oid, uint64_t rpid, bool is_like,
+                                 int type = 1, const std::function<void()>& callback = nullptr,
+                                 const ErrorCallback& error = nullptr);
+
+    /// 点踩评论
+    static void be_disagree_comment(const std::string& access_key, const std::string& oid, uint64_t rpid, bool is_dislike,
+                                 int type = 1, const std::function<void()>& callback = nullptr,
+                                 const ErrorCallback& error = nullptr);
+
+    /// 点赞动态
+    static void be_agree_dynamic(const std::string& access_key, const std::string& id, bool is_like,
                                  const std::function<void()>& callback = nullptr, const ErrorCallback& error = nullptr);
 
     /**
@@ -379,19 +448,20 @@ public:
      * @param callback
      * @param error
      */
-    static void add_comment(const std::string& access_key, const std::string& message, size_t oid, int64_t parent = 0,
-                            int64_t root = 0, const std::function<void(VideoCommentAddResult)>& callback = nullptr,
-                            const ErrorCallback& error = nullptr);
+    static void add_comment(const std::string& access_key, const std::string& message, const std::string& oid,
+                            uint64_t parent = 0, uint64_t root = 0, int type = 1,
+                            const std::function<void(VideoCommentAddResult)>& callback = nullptr,
+                            const ErrorCallback& error                                 = nullptr);
 
     /// 删除评论
-    static void delete_comment(const std::string& access_key, size_t oid, int64_t rpid,
+    static void delete_comment(const std::string& access_key, const std::string& oid, uint64_t rpid, int type = 1,
                                const std::function<void()>& callback = nullptr, const ErrorCallback& error = nullptr);
 
     /// 视频页 获取单个视频播放人数
-    static void get_video_online(int aid, int cid, const std::function<void(VideoOnlineTotal)>& callback = nullptr,
+    static void get_video_online(uint64_t aid, uint64_t cid, const std::function<void(VideoOnlineTotal)>& callback = nullptr,
                                  const ErrorCallback& error = nullptr);
 
-    static void get_video_online(const std::string& bvid, int cid,
+    static void get_video_online(const std::string& bvid, uint64_t cid,
                                  const std::function<void(VideoOnlineTotal)>& callback = nullptr,
                                  const ErrorCallback& error                            = nullptr);
 
@@ -400,11 +470,11 @@ public:
                                    const std::function<void(VideoRelation)>& callback = nullptr,
                                    const ErrorCallback& error                         = nullptr);
 
-    static void get_video_relation(size_t epid, const std::function<void(VideoEpisodeRelation)>& callback = nullptr,
+    static void get_video_relation(uint64_t epid, const std::function<void(VideoEpisodeRelation)>& callback = nullptr,
                                    const ErrorCallback& error = nullptr);
 
     /// 视频页 获取弹幕的xml文件
-    static void get_danmaku(unsigned int cid, const std::function<void(std::string)>& callback = nullptr,
+    static void get_danmaku(uint64_t cid, const std::function<void(std::string)>& callback = nullptr,
                             const ErrorCallback& error = nullptr);
 
     /// 视频页 获取字幕
@@ -412,14 +482,14 @@ public:
                              const ErrorCallback& error = nullptr);
 
     /// 视频页 获取高能进度条
-    static void get_highlight_progress(unsigned int cid,
+    static void get_highlight_progress(uint64_t cid,
                                        const std::function<void(VideoHighlightProgress)>& callback = nullptr,
                                        const ErrorCallback& error                                  = nullptr);
 
     /// 视频页 上报历史记录
-    static void report_history(const std::string& mid, const std::string& access_key, unsigned int aid,
-                               unsigned int cid, int type = 3, unsigned int progress = 0, unsigned int duration = 0,
-                               unsigned int sid = 0, unsigned int epid = 0,
+    static void report_history(const std::string& mid, const std::string& access_key, uint64_t aid,
+                               uint64_t cid, int type = 3, unsigned int progress = 0, unsigned int duration = 0,
+                               uint64_t sid = 0, uint64_t epid = 0,
                                const std::function<void()>& callback = nullptr, const ErrorCallback& error = nullptr);
 
     /// 直播页 上报观看记录
@@ -427,11 +497,11 @@ public:
                                     const ErrorCallback& error = nullptr);
 
     /// 点赞
-    static void be_agree(const std::string& access_key, int aid, bool is_like,
+    static void be_agree(const std::string& access_key, uint64_t aid, bool is_like,
                          const std::function<void()>& callback = nullptr, const ErrorCallback& error = nullptr);
 
     /// 投币
-    static void add_coin(const std::string& access_key, int aid, unsigned int coin_number, bool is_like,
+    static void add_coin(const std::string& access_key, uint64_t aid, unsigned int coin_number, bool is_like,
                          const std::function<void()>& callback = nullptr, const ErrorCallback& error = nullptr);
 
     /// 投币经验值
@@ -442,7 +512,7 @@ public:
                           const std::function<void()>& callback = nullptr, const ErrorCallback& error = nullptr);
 
     /// 追剧或取消追剧
-    static void follow_season(const std::string& access_key, size_t season, bool follow = true,
+    static void follow_season(const std::string& access_key, uint64_t season, bool follow = true,
                               const std::function<void()>& callback = nullptr, const ErrorCallback& error = nullptr);
 
     /**
@@ -455,7 +525,7 @@ public:
      * @param callback 若成功 进行回调
      * @param error 若失败返回失败原因
      */
-    static void add_resource(const std::string& access_key, int rid, int type, const std::string& add_ids,
+    static void add_resource(const std::string& access_key, uint64_t rid, int type, const std::string& add_ids,
                              const std::string& del_ids, const std::function<void()>& callback = nullptr,
                              const ErrorCallback& error = nullptr);
 
@@ -488,12 +558,12 @@ public:
      * @param error
      */
     static void get_collection_list_all(
-        int rid, int type, std::string mid,
+        uint64_t rid, int type, const std::string& mid,
         const std::function<void(SimpleCollectionListResultWrapper)>& callback = nullptr,
         const ErrorCallback& error                                             = nullptr);
 
     /// 三连
-    static void triple_like(const std::string& access_key, int aid, const std::function<void()>& callback = nullptr,
+    static void triple_like(const std::string& access_key, uint64_t aid, const std::function<void()>& callback = nullptr,
                             const ErrorCallback& error = nullptr);
 
     /// 搜索页 获取搜索视频内容
@@ -508,14 +578,24 @@ public:
                                       const std::function<void(SearchSuggestList)>& callback = nullptr,
                                       const ErrorCallback& error                             = nullptr);
 
-    /// 动态页 获取全部关注用户的最近动态
+    /// 动态页 获取全部关注用户的最近动态 视频
     static void dynamic_video(const unsigned int page, const std::string& offset = "",
                               const std::function<void(DynamicVideoListResultWrapper)>& callback = nullptr,
                               const ErrorCallback& error                                         = nullptr);
 
+    /// 动态页 获取全部关注用户的最近动态 图文
+    static void dynamic_article(const unsigned int page, const std::string& offset = "", uint64_t mid = 0,
+                                const std::function<void(DynamicArticleListResultWrapper)>& callback = nullptr,
+                                const ErrorCallback& error                                           = nullptr);
+
     /// 动态页 获取有最近动态的关注用户列表
     static void dynamic_up_list(const std::function<void(DynamicUpListResultWrapper)>& callback = nullptr,
                                 const ErrorCallback& error                                      = nullptr);
+
+    /// 获取单个动态详情
+    static void get_dynamic_detail(const std::string& id,
+                                   const std::function<void(DynamicArticleResultWrapper)>& callback = nullptr,
+                                   const ErrorCallback& error                              = nullptr);
 
     /// 设置页 获取网络时间
     static void get_unix_time(const std::function<void(UnixTimeResult)>& callback = nullptr,

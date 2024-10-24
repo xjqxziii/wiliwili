@@ -86,12 +86,37 @@ private:
     std::vector<std::string> data;
 };
 
+
+template <typename T>
+class CommonDataSourceDropdown : public DataSourceDropdown {
+public:
+    typedef std::function<RecyclingGridItem*(RecyclingGrid*, T&)> CommonCellForRowCallback;
+
+    CommonDataSourceDropdown(std::vector<T> result, BaseDropdown* view,
+                             CommonCellForRowCallback cb)
+        : DataSourceDropdown(view), data(std::move(result)), cellForRowFunc(cb) {}
+
+    RecyclingGridItem* cellForRow(RecyclingGrid* recycler, size_t index) override {
+        if (cellForRowFunc) return cellForRowFunc(recycler, data[index]);
+        return nullptr;
+    }
+
+    size_t getItemCount() override { return data.size(); }
+
+    void clearData() override { data.clear(); }
+
+private:
+    std::vector<T> data;
+    CommonCellForRowCallback cellForRowFunc = nullptr;
+};
+
+
 /**
  * 带有进入退出动画的菜单，自带列表，默认提供了文本列表，也可以自定义列表内容
  */
 class BaseDropdown : public EmptyDropdown {
 public:
-    BaseDropdown(const std::string& title, ValueSelectedEvent::Callback cb, int selected = 0);
+    BaseDropdown(const std::string& title, ValueSelectedEvent::Callback cb, size_t selected = 0);
 
     RecyclingGrid* getRecyclingList();
 
@@ -106,7 +131,7 @@ public:
     ValueSelectedEvent::Callback getSelectCallback();
 
     static BaseDropdown* text(const std::string& title, const std::vector<std::string>& values,
-                              ValueSelectedEvent::Callback cb, int selected = 0);
+                              ValueSelectedEvent::Callback cb, size_t selected = 0, const std::string& hint = "");
 
 protected:
     BRLS_BIND(RecyclingGrid, recycler, "grid_dropdown/recycler");

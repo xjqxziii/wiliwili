@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "nlohmann/json.hpp"
+#include "bilibili/util/json.hpp"
 #include "user_result.h"
 #include "mine_result.h"
 
@@ -112,34 +112,12 @@ inline void from_json(const nlohmann::json& nlohmann_json_j, VideoCommentControl
     }
 }
 
-class LevelInfo {
-public:
-    LevelInfo() { current_level = 0; }
-    int current_level;
-};
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LevelInfo, current_level);
-
-class CommentUserResult {
-public:
-    CommentUserResult() {
-        is_uploader      = false;
-        is_senior_member = 0;
-    }
-
-    std::string mid, uname, avatar;
-    int is_senior_member;
-    LevelInfo level_info{};
-    bool is_uploader;
-};
-
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CommentUserResult, mid, uname, avatar, is_senior_member, level_info);
-
 class VideoCommentResult {
 public:
     size_t ctime;
-    int64_t rpid, parent, root;
-    size_t oid;
-    CommentUserResult member;
+    uint64_t rpid, parent, root;
+    uint64_t oid;
+    UserCommentResult member;
     VideoCommentContent content;
     std::vector<VideoCommentResult> replies;
     VideoCommentControl reply_control;
@@ -179,29 +157,37 @@ inline void from_json(const nlohmann::json& nlohmann_json_j, VideoCommentCursor&
     NLOHMANN_JSON_EXPAND(NLOHMANN_JSON_PASTE(NLOHMANN_JSON_FROM, mode, next, is_end, is_begin, prev));
 }
 
+class VideoCommentUpper {
+public:
+    uint64_t mid;
+};
+inline void from_json(const nlohmann::json& nlohmann_json_j, VideoCommentUpper& nlohmann_json_t) {
+    NLOHMANN_JSON_FROM(mid);
+}
+
 class VideoCommentResultWrapper {
 public:
     VideoCommentCursor cursor;
     VideoCommentListResult replies;
     VideoCommentListResult top_replies;
+    VideoCommentUpper upper;
     size_t requestIndex = 0;  // 自定义数据，请求的评论页
 };
 inline void from_json(const nlohmann::json& nlohmann_json_j, VideoCommentResultWrapper& nlohmann_json_t) {
-    if (!nlohmann_json_j.at("top_replies").is_null()) {
-        nlohmann_json_j.at("top_replies").get_to(nlohmann_json_t.top_replies);
-    }
+    NLOHMANN_JSON_EXPAND(NLOHMANN_JSON_PASTE(NLOHMANN_JSON_FROM, top_replies, replies, cursor, upper));
+    // 标记是否是置顶评论
     for (auto& i : nlohmann_json_t.top_replies) i.top = true;
-    if (!nlohmann_json_j.at("replies").is_null()) {
-        nlohmann_json_j.at("replies").get_to(nlohmann_json_t.replies);
-    }
-    NLOHMANN_JSON_EXPAND(NLOHMANN_JSON_PASTE(NLOHMANN_JSON_FROM, cursor));
+    // 标记是否是up主评论
+    std::string video_uploader = std::to_string(nlohmann_json_t.upper.mid);
+    for (auto& i : nlohmann_json_t.top_replies) i.member.is_uploader = i.member.mid == video_uploader;
+    for (auto& i : nlohmann_json_t.replies) i.member.is_uploader = i.member.mid == video_uploader;
 }
 
 class VideoSingleCommentDetail {
 public:
     VideoCommentCursor cursor;
     VideoCommentResult root;
-    int64_t upper;
+    uint64_t upper;
 };
 inline void from_json(const nlohmann::json& nlohmann_json_j, VideoSingleCommentDetail& nlohmann_json_t) {
     if (nlohmann_json_j.contains("upper") && !nlohmann_json_j.at("upper").is_null()) {
@@ -228,7 +214,7 @@ inline void from_json(const nlohmann::json& nlohmann_json_j, VideoCommentAddResu
 
 class VideoDetailPage {
 public:
-    int cid = 0;
+    uint64_t cid = 0;
     size_t page;        // 分p的序号
     int duration;       // 视频长度，单位秒
     int progress = -1;  // 视频初始化的播放时间，用于加载历史记录
@@ -240,7 +226,7 @@ typedef std::vector<VideoDetailPage> VideoDetailPageListResult;
 
 class VideoDetailStat {
 public:
-    unsigned int aid;
+    uint64_t aid;
     int view;
     int danmaku;
     int favorite;
@@ -267,14 +253,15 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(UGCSeasonState, view);
 
 class UGCSeasonEpisodePage {
 public:
-    int cid, duration, page;
+    uint64_t cid;
+    int duration, page;
     std::string part;  // 原视频标题
 };
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(UGCSeasonEpisodePage, cid, duration, part, page);
 
 class UGCSeasonEpisode {
 public:
-    int season_id = 0, section_id = 0, id = 0, aid = 0, cid = 0;
+    uint64_t season_id = 0, section_id = 0, id = 0, aid = 0, cid = 0;
     int index = -1;
     std::string bvid, title;  // 合集视频标题
     UGCSeasonEpisodePage page;
@@ -283,7 +270,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(UGCSeasonEpisode, season_id, section_id, id, 
 
 class UGCSeasonSection {
 public:
-    int season_id;
+    uint64_t season_id;
     int id;  // section id
     std::string title;
     int type;
@@ -302,7 +289,7 @@ inline void to_json(nlohmann::json& nlohmann_json_j, const UGCSeasonSection& nlo
 class UGCSeason {
 public:
     int id;
-    int64_t mid;
+    uint64_t mid;
     std::string title, cover, intro;
     UGCSeasonState stat;
     bool is_pay_season;
@@ -324,7 +311,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(UGCSeason, sections, id, mid, title, cover, i
 class VideoDetailResult {
 public:
     std::string bvid;
-    int aid;
+    uint64_t aid;
     int videos;         // 视频数量
     int tid;            //分类ID
     int tname;          //分类名称
@@ -589,7 +576,7 @@ class VideoPageResult {
 public:
     int online_count;
     int64_t last_play_time;
-    int last_play_cid;
+    uint64_t last_play_cid;
     VideoPageSubtitleList subtitles;
     std::string mask_url;
 };
@@ -686,7 +673,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(VideoOnlineTotal, total);
 
 class Video {
 public:
-    int aid;
+    uint64_t aid;
     std::string bvid;
 
     Video() = default;

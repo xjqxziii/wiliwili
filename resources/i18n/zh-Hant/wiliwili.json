@@ -8,11 +8,13 @@
       "tab": "應用設定",
       "playback": {
         "header": "播放設定",
+        "player": "播放機",
         "report": "上傳歷史播放記錄",
         "player_bar": "下方固定顯示進度條",
         "low_quality": "低畫質解碼（以畫質為代價換取更低的功耗）",
         "in_memory_cache": "解码緩存",
         "hwdec": "硬體解碼",
+        "auto_play": "影片詳細頁直接播放",
         "exit_fullscreen": "播放結束時自動退出全屏",
         "play_strategy": "播放方式",
         "auto_play_next_part": "自動播放分集",
@@ -21,6 +23,7 @@
         "auto_no": "播完暫停影片",
         "auto_hint": "「自動播放推薦」 會在播完分集之後自動播放推薦影片",
         "sleep": "定時關閉",
+        "format": "格式",
         "video_codec": "影像編碼",
         "audio_quality": "影像音質",
         "video_format": "影像格式"
@@ -36,14 +39,25 @@
         "proxy": "網絡代理",
         "proxy_hint": "示例: http://127.0.0.1:7890"
       },
+      "ui": {
+        "header": "介面設定",
+        "window": "視窗",
+        "bottom_bar": "底部提示欄",
+        "ui_style": "介面風格",
+        "tv_osd": "電視風格播放器"
+      },
       "others": {
-        "header": "其他",
+        "header": "其他設定",
         "vibration": "手柄振動",
         "hide_bottom": "隱藏下方提示欄",
         "hide_fps": "隱藏 FPS",
+        "show_bottom": "顯示提示欄",
+        "show_fps": "顯示 FPS",
         "limited_fps": "最高幀數限制",
         "limited_fps_vsync": "垂直同步",
         "fullscreen": "全荧幕顯示",
+        "always_on_top": "窗口置頂",
+        "always_on_top_hint": "自動: 當窗口尺寸較小時自動開啟置頂",
         "tv_search": "電視風格搜尋頁",
         "clear_history": "清空搜尋記錄",
         "clear_season": "清空番劇自定義設定",
@@ -77,6 +91,7 @@
         "opencc": "自動轉換簡體中文 (需要重啓)",
         "keymap": {
           "header": "鍵位風格 (需要重啟)",
+          "swap": "鍵位交換 (需要重啟)",
           "xbox": "Xbox",
           "ps": "PlayStation",
           "keyboard": "鍵盤"
@@ -106,7 +121,9 @@
         "dlna_waiting": "等待 DLNA 投映中...",
         "dlna_quit": "確定要退出投映?",
         "up2date": "應用程式為最新版本。",
+        "checking_update": "正在檢查更新...",
         "release": "檢查更新",
+        "config_dir": "設定檔目錄",
         "config": "開啟設定檔目錄"
       }
     },
@@ -205,6 +222,11 @@
       "tab": "影視"
     }
   },
+  "dynamic": {
+    "detail": "動態詳情",
+    "video": "影片",
+    "article": "綜合"
+  },
   "search": {
     "tv": {
       "hint": "支持關鍵字及關鍵字首字母",
@@ -217,6 +239,17 @@
       "history_delete": "删除",
       "suggest": "猜你想搜"
     },
+    "history": {
+      "clear": "清空歷史記錄",
+      "clear_hint": "確認清空歷史記錄？"
+    },
+    "order": {
+      "all": "綜合排序",
+      "click": "最多播放",
+      "pubdate": "最新發佈",
+      "dm": "最多彈幕",
+      "stow": "最多收藏"
+    },
     "tab": "搜尋",
     "t0": "歷史",
     "t1": "熱搜",
@@ -227,6 +260,30 @@
   "activity": {
     "all": "全部動態",
     "refresh": "重新整理列表"
+  },
+  "inbox": {
+    "chat": {
+      "tab": "聊天列表",
+      "hint": "發個消息聊聊唄 ~",
+      "unknown": "暫不支持該消息"
+    },
+    "tab": {
+      "like": "收到的贊",
+      "at": "@我的",
+      "reply": "回復我的"
+    },
+    "type": {
+      "video": "視頻",
+      "reply": "評論",
+      "article": "文章",
+      "dynamic": "動態",
+      "danmu": "彈幕",
+      "album": "動態"
+    },
+    "more": "等 {} 人贊了我的{}",
+    "like": "贊了我的{}",
+    "at": "在{}中@了我",
+    "reply": "回復我的{}"
   },
   "mine": {
     "login": {
@@ -276,6 +333,7 @@
     "recommend": "推薦",
     "uploaded": "投稿",
     "qr": "手機掃碼觀看/分享",
+    "clipboard": "已複製到剪貼板",
     "comment": "評論",
     "current": "人正在看",
     "share": "分享",
@@ -343,6 +401,8 @@
       },
       "aspect": {
         "header": "影片比例",
+        "crop": "填充",
+        "stretch": "拉伸",
         "auto": "自動"
       },
       "shader": {
@@ -405,7 +465,7 @@
       }
     },
     "single_comment": {
-      "detail": "詳情",
+      "detail": "評論詳情",
       "hint": "發一條友善的評論",
       "related": "總共{}個答覆",
       "end": "沒有更多的評論",

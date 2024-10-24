@@ -8,11 +8,13 @@
       "tab": "应用设置",
       "playback": {
         "header": "播放设置",
+        "player": "播放器",
         "report": "上传历史播放记录",
         "player_bar": "下方固定显示进度条",
         "low_quality": "低画质解码（以画质为代价换取更低的功耗）",
         "in_memory_cache": "解码缓存",
         "hwdec": "硬件解码",
+        "auto_play": "视频详情页直接播放",
         "exit_fullscreen": "播放结束时自动退出全屏",
         "play_strategy": "播放方式",
         "auto_play_next_part": "自动播放分集",
@@ -21,6 +23,7 @@
         "auto_no": "播完暂停视频",
         "auto_hint": "「自动播放推荐」 会在播完分集之后自动播放推荐视频",
         "sleep": "定时关闭",
+        "format": "格式",
         "video_codec": "视频编码",
         "audio_quality": "视频音质",
         "video_format": "视频格式"
@@ -36,14 +39,25 @@
         "proxy": "网络代理",
         "proxy_hint": "示例: http://127.0.0.1:7890"
       },
+      "ui": {
+        "header": "界面设置",
+        "window": "窗口",
+        "bottom_bar": "底部提示栏",
+        "ui_style": "界面风格",
+        "tv_osd": "电视风格播放器"
+      },
       "others": {
-        "header": "其他",
+        "header": "其他设置",
         "vibration": "手柄振动",
         "hide_bottom": "隐藏下方提示栏",
         "hide_fps": "隐藏 FPS",
+        "show_bottom": "显示提示栏",
+        "show_fps": "显示 FPS",
         "limited_fps": "最高帧数限制",
         "limited_fps_vsync": "垂直同步",
         "fullscreen": "全屏显示",
+        "always_on_top": "窗口置顶",
+        "always_on_top_hint": "自动: 当窗口尺寸较小时自动开启置顶",
         "tv_search": "电视风格搜索页",
         "clear_history": "清空搜索记录",
         "clear_season": "清空番剧自定义设置",
@@ -77,6 +91,7 @@
         "opencc": "自动转换简体中文 (需要重启)",
         "keymap": {
           "header": "键位图标 (需要重启)",
+          "swap": "键位交换 (需要重启)",
           "xbox": "Xbox",
           "ps": "PlayStation",
           "keyboard": "键盘"
@@ -106,7 +121,9 @@
         "dlna_waiting": "等待 DLNA 投屏中...",
         "dlna_quit": "确定要退出投屏?",
         "up2date": "应用已经是最新版",
+        "checking_update": "正在检查更新...",
         "release": "检查更新",
+        "config_dir": "配置目录",
         "config": "打开配置目录"
       }
     },
@@ -205,6 +222,11 @@
       "tab": "影视"
     }
   },
+  "dynamic": {
+    "detail": "动态详情",
+    "video": "视频",
+    "article": "综合"
+  },
   "search": {
     "tv": {
       "hint": "支持关键字及关键字首字母",
@@ -217,6 +239,17 @@
       "history_delete": "删除",
       "suggest": "猜你想搜"
     },
+    "history": {
+      "clear": "清空历史记录",
+      "clear_hint": "确认清空历史记录？"
+    },
+    "order": {
+      "all": "综合排序",
+      "click": "最多播放",
+      "pubdate": "最新发布",
+      "dm": "最多弹幕",
+      "stow": "最多收藏"
+    },
     "tab": "搜索",
     "t0": "历史",
     "t1": "热搜",
@@ -227,6 +260,30 @@
   "activity": {
     "all": "全部动态",
     "refresh": "刷新列表"
+  },
+  "inbox": {
+    "chat": {
+      "tab": "聊天列表",
+      "hint": "发个消息聊聊呗 ~",
+      "unknown": "暂不支持该消息"
+    },
+    "tab": {
+      "like": "收到的赞",
+      "at": "@我的",
+      "reply": "回复我的"
+    },
+    "type": {
+      "video": "视频",
+      "reply": "评论",
+      "article": "文章",
+      "dynamic": "动态",
+      "danmu": "弹幕",
+      "album": "动态"
+    },
+    "more": "等 {} 人赞了我的{}",
+    "like": "赞了我的{}",
+    "at": "在{}中@了我",
+    "reply": "回复了我的{}"
   },
   "mine": {
     "login": {
@@ -276,6 +333,7 @@
     "recommend": "推荐",
     "uploaded": "投稿",
     "qr": "手机扫码观看/分享",
+    "clipboard": "已复制到剪贴板",
     "comment": "评论",
     "current": "人正在看",
     "share": "分享",
@@ -343,6 +401,8 @@
       },
       "aspect": {
         "header": "视频比例",
+        "crop": "填充",
+        "stretch": "拉伸",
         "auto": "自动"
       },
       "shader": {
@@ -405,7 +465,7 @@
       }
     },
     "single_comment": {
-      "detail": "详情",
+      "detail": "评论详情",
       "hint": "发一条友善的评论",
       "related": "相关回复共{}条",
       "end": "没有更多评论",

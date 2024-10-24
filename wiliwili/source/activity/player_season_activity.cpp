@@ -3,6 +3,7 @@
 //
 
 #include <borealis/views/dialog.hpp>
+#include <borealis/views/dropdown.hpp>
 #include <borealis/core/touch/tap_gesture.hpp>
 
 #include "bilibili/result/home_pgc_season_result.h"
@@ -10,6 +11,7 @@
 #include "fragment/player_collection.hpp"
 #include "fragment/player_fragments.hpp"
 #include "fragment/season_evaluate.hpp"
+#include "fragment/share_dialog.hpp"
 #include "utils/config_helper.hpp"
 #include "utils/dialog_helper.hpp"
 #include "utils/number_helper.hpp"
@@ -18,6 +20,7 @@
 #include "view/video_card.hpp"
 #include "view/svg_image.hpp"
 #include "view/mpv_core.hpp"
+#include "view/grid_dropdown.hpp"
 
 /// PlayerSeasonActivity
 
@@ -104,12 +107,18 @@ void PlayerSeasonActivity::onContentAvailable() {
 
     //评论加载下一页
     recyclingGrid->onNextPage([this]() {
-        if (this->episodeResult.aid != 0) this->requestVideoComment(this->episodeResult.aid);
+        if (this->episodeResult.aid != 0) this->requestVideoComment(std::to_string(this->episodeResult.aid));
     });
 
     // 二维码按钮
     this->btnQR->getParent()->registerClickAction([this](...) {
-        this->showShareDialog(this->episodeResult.link);
+        auto dialog = new ShareDialog();
+#if defined(__APPLE__) || defined(__linux__) || defined(_WIN32)
+        dialog->open(episodeResult.link, seasonInfo.season_title + " " + episodeResult.title, seasonInfo.evaluate,
+                     seasonInfo.cover);
+#else
+        dialog->open(this->episodeResult.link);
+#endif
         return true;
     });
 
@@ -268,6 +277,30 @@ void PlayerSeasonActivity::onSeasonVideoInfo(const bilibili::SeasonResultWrapper
 
         return container;
     });
+
+    video->setSeasonAction([this](brls::View* view) {
+        auto* dropdown = new BaseDropdown(
+            "wiliwili/player/p"_i18n, [this](int selected) { this->onIndexChange(selected); }, episodeResult.index);
+        dropdown->getRecyclingList()->registerCell("Cell", []() { return PlayerTabCell::create(); });
+        dropdown->getRecyclingList()->registerCell("Header", []() { return PlayerTabHeader::create(); });
+        dropdown->setDataSource(new CommonDataSourceDropdown<bilibili::SeasonEpisodeResult>(
+            this->episodeList, dropdown, [dropdown](auto recycler, auto d) {
+                if (!d.id) {
+                    // 显示项为标题
+                    auto* item = (PlayerTabHeader*)recycler->dequeueReusableCell("Header");
+                    item->title->setText(d.title);
+                    return (RecyclingGridItem*)item;
+                }
+                // 显示分集项
+                auto* item = (PlayerTabCell*)recycler->dequeueReusableCell("Cell");
+                item->title->setText(d.title);
+                item->setSelected(dropdown->getSelected() == d.index);
+                item->setBadge(d.badge_info.text, d.badge_info.bg_color);
+                return (RecyclingGridItem*)item;
+            }));
+        brls::Application::pushActivity(new brls::Activity(dropdown));
+        return true;
+    });
 }
 
 void PlayerSeasonActivity::onSeasonSeriesInfo(const bilibili::SeasonSeries& result) {
@@ -351,7 +384,7 @@ void PlayerSeasonActivity::onSeasonRecommend(const bilibili::SeasonRecommendWrap
     });
 }
 
-void PlayerSeasonActivity::playSeason(size_t season_id) {
+void PlayerSeasonActivity::playSeason(uint64_t season_id) {
     //上报历史记录
     this->reportCurrentProgress(MPVCore::instance().video_progress, MPVCore::instance().duration);
 
@@ -384,7 +417,7 @@ void PlayerSeasonActivity::playSeason(size_t season_id) {
     this->requestData(season_id, PGC_ID_TYPE::SEASON_ID);
 }
 
-size_t PlayerSeasonActivity::getAid() { return episodeResult.aid; }
+uint64_t PlayerSeasonActivity::getAid() { return episodeResult.aid; }
 
 void PlayerSeasonActivity::requestCastUrl() { this->requestCastVideoUrl(episodeResult.id, episodeResult.cid, 2); }
 
