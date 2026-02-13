@@ -69,7 +69,7 @@ void Intent::openLive(int live, const std::string& name, const std::string& view
     brls::Application::pushActivity(activity, brls::TransitionAnimation::NONE);
 }
 // 开启本地文件
-static void openFile(const std::string& path) {
+void Intent::openLocal(const cpr::fs::path &path) {
     auto activity = new LocalPlayerActivity(path);
     brls::Application::pushActivity(activity, brls::TransitionAnimation::NONE);
 }
