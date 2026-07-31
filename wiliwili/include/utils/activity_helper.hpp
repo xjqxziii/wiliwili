@@ -46,6 +46,9 @@ public:
 
     // 开启动态
     static void openActivity(const std::string& id);
+
+    // 开启本地视频播放
+    static void openLocalFile(const std::string& path);
 };
 
 #if defined(__linux__) || defined(_WIN32) || defined(__APPLE__)

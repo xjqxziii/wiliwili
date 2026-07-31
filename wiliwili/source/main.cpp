@@ -9,7 +9,13 @@
  Licensed under the GPL-3.0 license
 */
 
+#include <filesystem>
+
 #include <borealis.hpp>
+
+#if defined(__linux__) || defined(_WIN32) || defined(__APPLE__)
+#include <borealis/platforms/glfw/glfw_platform.hpp>
+#endif
 
 #include "utils/config_helper.hpp"
 #include "utils/activity_helper.hpp"
@@ -20,6 +26,8 @@
 #endif
 
 int main(int argc, char* argv[]) {
+    // Parse command-line flags and collect local file path
+    std::string localFilePath;
     for (int i = 1; i < argc; i++) {
         if (std::strcmp(argv[i], "-d") == 0) {
             brls::Logger::setLogLevel(brls::LogLevel::LOG_DEBUG);
@@ -30,6 +38,8 @@ int main(int argc, char* argv[]) {
         } else if (std::strcmp(argv[i], "-o") == 0) {
             const char* path = (i + 1 < argc) ? argv[++i] : "wiliwili.log";
             brls::Logger::setLogOutput(std::fopen(path, "w+"));
+        } else if (localFilePath.empty()) {
+            localFilePath = argv[i];
         }
     }
 
@@ -55,7 +65,37 @@ int main(int argc, char* argv[]) {
 
     brls::Application::getPlatform()->disableScreenDimming(false);
 
-    if (brls::Application::getPlatform()->isApplicationMode()) {
+#if defined(__linux__) || defined(_WIN32) || defined(__APPLE__)
+    // Set up drag-and-drop for local video files
+    auto* glfwPlatform = dynamic_cast<brls::GLFWPlatform*>(brls::Application::getPlatform());
+    if (glfwPlatform) {
+        auto* glfwVideoCtx = dynamic_cast<brls::GLFWVideoContext*>(glfwPlatform->getVideoContext());
+        if (glfwVideoCtx) {
+            GLFWwindow* win = glfwVideoCtx->getGLFWWindow();
+            glfwSetDropCallback(win, [](GLFWwindow* /*window*/, int count, const char** paths) {
+                if (count > 0) {
+                    std::string path(paths[0]);
+                    brls::Threading::sync([path]() {
+                        Intent::openLocalFile(path);
+                    });
+                }
+            });
+        }
+    }
+#endif
+
+    if (!localFilePath.empty()) {
+        if (std::filesystem::exists(localFilePath)) {
+            Intent::openLocalFile(localFilePath);
+        } else {
+            brls::Logger::error("File not found: {}", localFilePath);
+            if (brls::Application::getPlatform()->isApplicationMode()) {
+                Intent::openMain();
+            } else {
+                Intent::openHint();
+            }
+        }
+    } else if (brls::Application::getPlatform()->isApplicationMode()) {
         Intent::openMain();
         // Uncomment these lines to debug activities
         //        Intent::openBV("BV1Da411Y7U4");  // 弹幕防遮挡 (横屏)
